@@ -28,7 +28,12 @@ def f(**kwargs, ): ### `got '\)', want parameter`
 ---
 
 # Parameters are validated later.
-def f(**kwargs, *args, b=1, a, **kwargs, *args, b=1, a):
+def f(**kwargs, *args, *, b=1, a, **kwargs, *args, *, b=1, a):
+  pass
+
+---
+
+def f(a, *-b, c): # ### `got '-', want ','`
   pass
 
 ---
