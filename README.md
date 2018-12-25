@@ -3,7 +3,7 @@
 Monty is a subset of Python, supplemented with the Go standard
 library which is called by reflection.
 
-Monty is derived from the starlark-go project by Google engineers
+Monty is a fork derived from the starlark-go project by Google engineers
 Alan Donovan and Jay Conrod. Their code is available at https://go.starlark.net ,
 also known as https://github.com/google/starlark-go.
 
