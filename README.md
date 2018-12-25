@@ -156,10 +156,11 @@ its scanner was derived from one written by Russ Cox.
 
 ### Legal
 
+Monty is Copyright(c) 2018 Jason E. Aten and the Monty authors.
 Starlark in Go is Copyright (c) 2018 The Bazel Authors.
 All rights reserved.
 
 It is provided under a 3-clause BSD license:
-[LICENSE](https://github.com/google/starlark-go/blob/master/LICENSE).
+[LICENSE](https://github.com/glycerine/monty/blob/master/LICENSE).
 
 Starlark in Go is not an official Google product.
