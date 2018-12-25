@@ -157,6 +157,8 @@ its scanner was derived from one written by Russ Cox.
 ### Legal
 
 Monty is Copyright(c) 2018 Jason E. Aten and the Monty authors.
+All rights reserved.
+
 Starlark in Go is Copyright (c) 2018 The Bazel Authors.
 All rights reserved.
 
