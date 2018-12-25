@@ -15,9 +15,9 @@ import (
 	"sort"
 	"strings"
 
-	"go.starlark.net/repl"
-	"go.starlark.net/resolve"
-	"go.starlark.net/starlark"
+	"github.com/glycerine/monty/repl"
+	"github.com/glycerine/monty/resolve"
+	"github.com/glycerine/monty/starlark"
 )
 
 // flags
@@ -39,7 +39,7 @@ func init() {
 }
 
 func main() {
-	log.SetPrefix("starlark: ")
+	log.SetPrefix("monty: ")
 	log.SetFlags(0)
 	flag.Parse()
 
@@ -79,11 +79,11 @@ func main() {
 			os.Exit(1)
 		}
 	case flag.NArg() == 0:
-		fmt.Println("Welcome to Starlark (go.starlark.net)")
+		fmt.Println("Welcome to Monty (github.com/glycerine/monty)")
 		thread.Name = "REPL"
 		repl.REPL(thread, globals)
 	default:
-		log.Fatal("want at most one Starlark file name")
+		log.Fatal("want at most one Monty file name")
 	}
 
 	// Print the global environment.
