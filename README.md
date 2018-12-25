@@ -8,8 +8,8 @@ Monty is a fork of the starlark-go project.
 That code is available at https://go.starlark.net ,
 also known as https://github.com/google/starlark-go.
 
-Monty uses code from https://github.com/starlight-go/starlight
-which is licensed under the MIT license.
+Monty uses code from Nate Finch's https://github.com/starlight-go/starlight
+project, which is licensed under the MIT license.
 
 An adaptation of the README for Starlark-Go follows.
 
