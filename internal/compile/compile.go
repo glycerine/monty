@@ -20,7 +20,7 @@
 // Operands, logically uint32s, are encoded using little-endian 7-bit
 // varints, the top bit indicating that more bytes follow.
 //
-package compile // import "go.starlark.net/internal/compile"
+package compile
 
 import (
 	"bytes"
@@ -30,8 +30,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"go.starlark.net/resolve"
-	"go.starlark.net/syntax"
+	"github.com/glycerine/monty/resolve"
+	"github.com/glycerine/monty/syntax"
 )
 
 const debug = false // TODO(adonovan): use a bitmap of options; and regexp to match files

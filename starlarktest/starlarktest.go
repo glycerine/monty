@@ -10,7 +10,7 @@
 //
 // The assert.error function, which reports errors to the current Go
 // testing.T, requires that clients call SetTest(thread, t) before use.
-package starlarktest // import "go.starlark.net/starlarktest"
+package starlarktest
 
 import (
 	"bytes"
@@ -20,8 +20,8 @@ import (
 	"regexp"
 	"sync"
 
-	"go.starlark.net/starlark"
-	"go.starlark.net/starlarkstruct"
+	"github.com/glycerine/monty/starlark"
+	"github.com/glycerine/monty/starlarkstruct"
 )
 
 const localKey = "Reporter"
@@ -133,5 +133,5 @@ func freeze(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, k
 // 'go build', under which a test runs in its package directory,
 // and Blaze, under which a test runs in the root of the tree.
 var DataFile = func(pkgdir, filename string) string {
-	return filepath.Join(build.Default.GOPATH, "src/go.starlark.net", pkgdir, filename)
+	return filepath.Join(build.Default.GOPATH, "src/github.com/glycerine/monty", pkgdir, filename)
 }

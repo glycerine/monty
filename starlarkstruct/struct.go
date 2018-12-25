@@ -4,7 +4,7 @@
 
 // Package starlarkstruct defines the Starlark 'struct' type,
 // an optional language extension.
-package starlarkstruct // import "go.starlark.net/starlarkstruct"
+package starlarkstruct
 
 // It is tempting to introduce a variant of Struct that is a wrapper
 // around a Go struct value, for stronger typing guarantees and more
@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"sort"
 
-	"go.starlark.net/starlark"
-	"go.starlark.net/syntax"
+	"github.com/glycerine/monty/starlark"
+	"github.com/glycerine/monty/syntax"
 )
 
 // Make is the implementation of a built-in function that instantiates

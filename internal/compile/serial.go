@@ -84,7 +84,7 @@ import (
 	debugpkg "runtime/debug"
 	"unsafe"
 
-	"go.starlark.net/syntax"
+	"github.com/glycerine/monty/syntax"
 )
 
 const magic = "!sky"

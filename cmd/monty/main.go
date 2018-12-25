@@ -1,10 +1,11 @@
+// Copyright 2017 The Monty Authors. All rights reserved.
 // Copyright 2017 The Bazel Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// The starlark command interprets a Starlark file.
+// The monty command interprets a Monty file.
 // With no arguments, it starts a read-eval-print loop (REPL).
-package main // import "go.starlark.net/cmd/starlark"
+package main
 
 import (
 	"flag"

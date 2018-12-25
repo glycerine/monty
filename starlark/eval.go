@@ -17,9 +17,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"go.starlark.net/internal/compile"
-	"go.starlark.net/resolve"
-	"go.starlark.net/syntax"
+	"github.com/glycerine/monty/internal/compile"
+	"github.com/glycerine/monty/resolve"
+	"github.com/glycerine/monty/syntax"
 )
 
 const debug = false

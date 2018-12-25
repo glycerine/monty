@@ -22,7 +22,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"go.starlark.net/syntax"
+	"github.com/glycerine/monty/syntax"
 )
 
 // Universe defines the set of universal built-ins, such as None, True, and len.
