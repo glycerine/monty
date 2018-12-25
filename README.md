@@ -1,6 +1,6 @@
 # Monty
 
-Monty is a subset of Python, supplemented with much of the Go standard
+Monty is a subset of Python, supplemented with the Go standard
 library which is called by reflection.
 
 Monty is derived from the starlark-go project by Google engineers
@@ -9,9 +9,8 @@ also known as https://github.com/google/starlark-go.
 
 An adaptation of the README for Starlark-Go follows.
 
-# Starlark in Go
+## Starlark in Go
 
-This is the home of the _Starlark in Go_ project.
 Starlark in Go is an interpreter for Starlark, implemented in Go.
 Starlark was formerly known as Skylark.
 
