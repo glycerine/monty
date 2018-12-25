@@ -4,15 +4,16 @@ Monty is a subset of Python, supplemented with much of the Go standard
 library which is called by reflection.
 
 Monty is derived from the starlark-go project by Google engineers
-Alan Donovan and Jay Conrod. The original README for Starlark
-follows.
+Alan Donovan and Jay Conrod. Their code is available at https://go.starlark.net ,
+also known as https://github.com/google/starlark-go.
+
+An adaptation of the README for Starlark-Go follows.
 
 # Starlark in Go
 
 This is the home of the _Starlark in Go_ project.
 Starlark in Go is an interpreter for Starlark, implemented in Go.
 Starlark was formerly known as Skylark.
-The new import path for Go packages is `"go.starlark.net/starlark"`.
 
 Starlark is a dialect of Python intended for use as a configuration language.
 Like Python, it is an untyped dynamic language with high-level data
@@ -58,7 +59,7 @@ Build the code:
 ```shell
 # check out the code and dependencies,
 # and install interpreter in $GOPATH/bin
-$ go get -u go.starlark.net/cmd/starlark
+$ go get -u github.com/glycerine/monty/cmd/monty
 ```
 
 Run the interpreter:
@@ -74,7 +75,7 @@ coins = {
 print('By name:\t' + ', '.join(sorted(coins.keys())))
 print('By value:\t' + ', '.join(sorted(coins.keys(), key=coins.get)))
 
-$ starlark coins.star
+$ monty coins.star
 By name:	dime, nickel, penny, quarter
 By value:	penny, nickel, dime, quarter
 ```
@@ -82,7 +83,7 @@ By value:	penny, nickel, dime, quarter
 Interact with the read-eval-print loop (REPL):
 
 ```
-$ starlark
+$ monty
 >>> def fibonacci(n):
 ...    res = list(range(n))
 ...    for i in res[2:]:
