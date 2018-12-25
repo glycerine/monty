@@ -19,7 +19,12 @@ import (
 	"github.com/glycerine/monty/repl"
 	"github.com/glycerine/monty/resolve"
 	"github.com/glycerine/monty/starlark"
+
+	"github.com/glycerine/monty/starlarktest"
+	"github.com/glycerine/monty/verb"
 )
+
+var vv = verb.VV
 
 // flags
 var (
@@ -28,15 +33,15 @@ var (
 	execprog   = flag.String("c", "", "execute program `prog`")
 )
 
-// non-standard dialect flags
 func init() {
-	flag.BoolVar(&resolve.AllowFloat, "float", resolve.AllowFloat, "allow floating-point numbers")
-	flag.BoolVar(&resolve.AllowSet, "set", resolve.AllowSet, "allow set data type")
-	flag.BoolVar(&resolve.AllowLambda, "lambda", resolve.AllowLambda, "allow lambda expressions")
-	flag.BoolVar(&resolve.AllowNestedDef, "nesteddef", resolve.AllowNestedDef, "allow nested def statements")
-	flag.BoolVar(&resolve.AllowBitwise, "bitwise", resolve.AllowBitwise, "allow bitwise operations (&, |, ^, ~, <<, and >>)")
-	flag.BoolVar(&resolve.AllowRecursion, "recursion", resolve.AllowRecursion, "allow while statements and recursive functions")
-	flag.BoolVar(&resolve.AllowGlobalReassign, "globalreassign", resolve.AllowGlobalReassign, "allow reassignment of globals, and if/for/while statements at top level")
+	resolve.AllowNestedDef = true      // allow def statements within function bodies
+	resolve.AllowLambda = true         // allow lambda expressions
+	resolve.AllowFloat = true          // allow floating point literals, the 'float' built-in, and x / y
+	resolve.AllowSet = true            // allow the 'set' built-in
+	resolve.AllowBitwise = true        // allow bitwise operations
+	resolve.AllowRecursion = true      // allow while statements and recursive functions
+	resolve.AllowGlobalReassign = true // allow reassignment of globals, and if/for/while statements at top level
+	//resolve.AllowAddressable = true
 }
 
 func main() {
@@ -56,7 +61,12 @@ func main() {
 	}
 
 	thread := &starlark.Thread{Load: repl.MakeLoad()}
-	globals := make(starlark.StringDict)
+	//globals := make(starlark.StringDict)
+
+	globals, err := starlarktest.LoadAssertModule()
+	if err != nil {
+		panic(err)
+	}
 
 	switch {
 	case flag.NArg() == 1 || *execprog != "":
@@ -74,14 +84,28 @@ func main() {
 			filename = flag.Arg(0)
 		}
 		thread.Name = "exec " + filename
-		globals, err = starlark.ExecFile(thread, filename, src, nil)
+		back, err := starlark.ExecFile(thread, filename, src, globals)
 		if err != nil {
 			repl.PrintError(err)
 			os.Exit(1)
 		}
+
+		vv("before merge, globals = '%s'", globals)
+		vv("back = '%s'", back)
+
+		// merge back into globals
+		for k, v := range back {
+			globals[k] = v
+		}
+
+		vv("after merge globals = '%s'", globals)
+
 	case flag.NArg() == 0:
 		fmt.Println("Welcome to Monty (github.com/glycerine/monty)")
 		thread.Name = "REPL"
+
+		vv("before REPL, globals = '%s'", globals)
+
 		repl.REPL(thread, globals)
 	default:
 		log.Fatal("want at most one Monty file name")

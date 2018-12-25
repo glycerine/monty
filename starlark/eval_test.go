@@ -17,7 +17,10 @@ import (
 	"github.com/glycerine/monty/starlark"
 	"github.com/glycerine/monty/starlarktest"
 	"github.com/glycerine/monty/syntax"
+	"github.com/glycerine/monty/verb"
 )
+
+var vv = verb.VV
 
 // A test may enable non-standard options by containing (e.g.) "option:recursion".
 func setOptions(src string) {

@@ -7,6 +7,9 @@ Monty is a fork derived from the starlark-go project by Google engineers
 Alan Donovan and Jay Conrod. Their code is available at https://go.starlark.net ,
 also known as https://github.com/google/starlark-go.
 
+Monty uses code from Nate Finch's https://github.com/starlight-go/starlight
+starlight-go is licensed under the MIT license.
+
 An adaptation of the README for Starlark-Go follows.
 
 ## Starlark in Go
