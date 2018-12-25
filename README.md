@@ -1,14 +1,15 @@
 # Monty
 
 Monty is a subset of Python, supplemented with the Go standard
-library which is called by reflection.
+library which is called by reflection. It is licensed under a
+BSD style license, see the LICENSE file herein.
 
-Monty is a fork derived from the starlark-go project.
+Monty is a fork of the starlark-go project.
 That code is available at https://go.starlark.net ,
 also known as https://github.com/google/starlark-go.
 
 Monty uses code from https://github.com/starlight-go/starlight
-starlight-go is licensed under the MIT license.
+which is licensed under the MIT license.
 
 An adaptation of the README for Starlark-Go follows.
 
