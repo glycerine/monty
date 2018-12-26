@@ -646,6 +646,11 @@ func (d *Dict) Hash() (uint32, error)                           { return 0, fmt.
 func (d *Dict) Attr(name string) (Value, error) { return builtinAttr(d, name, dictMethods) }
 func (d *Dict) AttrNames() []string             { return builtinAttrNames(dictMethods) }
 
+// insert with a dot expression such as "x.f = y".
+func (d *Dict) SetField(name string, val Value) error {
+	return d.ht.insert(String(name), val)
+}
+
 func (x *Dict) CompareSameType(op syntax.Token, y_ Value, depth int) (bool, error) {
 	y := y_.(*Dict)
 	switch op {
