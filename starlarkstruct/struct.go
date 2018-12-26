@@ -205,6 +205,34 @@ func (x *Struct) Binary(op syntax.Token, y starlark.Value, side starlark.Side) (
 	return nil, nil // unhandled
 }
 
+// SetField is required for
+// the HasSetField interface. This means we have fields
+// that may be written by a dot expression such as "x.f = y".
+func (s *Struct) SetField(name string, val starlark.Value) error {
+	// Binary search the entries. Borrowed from Attr()
+	n := len(s.entries)
+	i, j := 0, n
+	for i < j {
+		h := int(uint(i+j) >> 1)
+		if s.entries[h].name < name {
+			i = h + 1
+		} else {
+			j = h
+		}
+	}
+	if i < n && s.entries[i].name == name {
+		s.entries[i].value = val
+		return nil
+	}
+	// not found
+
+	var ctor string
+	if s.constructor != Default {
+		ctor = s.constructor.String() + " "
+	}
+	return fmt.Errorf("%sstruct has no .%s attribute", ctor, name)
+}
+
 // Attr returns the value of the specified field,
 // or deprecated method if the name is "to_json" or "to_proto"
 // and the struct has no field of that name.

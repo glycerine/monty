@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/glycerine/monty/starlarkstruct"
+
 	"github.com/starlight-go/starlight"
 	"github.com/starlight-go/starlight/convert"
 
@@ -148,6 +150,9 @@ func (env *MontyEnv) Init() {
 	} else {
 		dict = make(map[string]starlark.Value)
 	}
+
+	// add the struct constructor.
+	dict["struct"] = starlark.NewBuiltin("struct", starlarkstruct.Make)
 
 	env.GlobalDict = dict
 	env.ScriptCache = scriptCache
