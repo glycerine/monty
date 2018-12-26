@@ -98,7 +98,7 @@ func main() {
 		}
 
 	case flag.NArg() == 0:
-		fmt.Println("Welcome to Monty (github.com/glycerine/monty)")
+		fmt.Println("Welcome to Monty (https://github.com/glycerine/monty), a dialect of Python.")
 
 		//vv("before REPL, globals = '%s'", env.GlobalDict)
 

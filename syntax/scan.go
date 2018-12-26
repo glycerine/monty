@@ -78,6 +78,7 @@ const (
 	LTLT_EQ       // <<=
 	GTGT_EQ       // >>=
 	STARSTAR      // **
+	COLONEQUAL    // :=
 
 	// Keywords
 	AND
@@ -163,6 +164,7 @@ var tokenNames = [...]string{
 	LTLT_EQ:       "<<=",
 	GTGT_EQ:       ">>=",
 	STARSTAR:      "**",
+	COLONEQUAL:    ":=",
 	AND:           "and",
 	BREAK:         "break",
 	CONTINUE:      "continue",
@@ -730,6 +732,11 @@ start:
 
 	case ':', ';': // single-char tokens (except comma)
 		sc.readRune()
+		switch sc.peekRune() {
+		case '=':
+			sc.readRune()
+			return EQ // jea: turn ":=" into "="
+		}
 		switch c {
 		case ':':
 			return COLON
