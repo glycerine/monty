@@ -134,6 +134,8 @@ func (env *MontyEnv) Init() {
 	env.GoGlobal["bits"] = shadow_math_bits.Pkg
 	env.GoGlobal["cmplx"] = shadow_math_cmplx.Pkg
 
+	env.GoGlobal["string"] = starlark.GenericAsString
+
 	// get someplace. TODO: improve where we look for scripts.
 	dir, err := os.Getwd()
 	panicOn(err)

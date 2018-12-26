@@ -445,6 +445,18 @@ func (x String) CompareSameType(op syntax.Token, y_ Value, depth int) (bool, err
 
 func AsString(x Value) (string, bool) { v, ok := x.(String); return string(v), ok }
 
+// GenericAsString handles converting  []byte -> string
+func GenericAsString(x interface{}) (string, bool) {
+	switch v := x.(type) {
+	case Value:
+		return AsString(v)
+	case []byte:
+		return string(v), true
+	default:
+		return fmt.Sprintf("%#v", x), true
+	}
+}
+
 // A stringIterable is an iterable whose iterator yields a sequence of
 // either Unicode code points or elements (bytes),
 // either numerically or as successive substrings.
