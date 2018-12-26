@@ -11,6 +11,10 @@ also known as https://github.com/google/starlark-go.
 Monty uses code from Nate Finch's https://github.com/starlight-go/starlight
 project, which is licensed under the MIT license.
 
+This talk by Alan Donovan, https://www.youtube.com/watch?v=9P_YKVhncWI, is a good
+introduction to the original motivation for Starlark (nee Skylark) as a configuration
+language for the Bazel build system.
+
 An adaptation of the README for Starlark-Go follows.
 
 ## Starlark in Go
