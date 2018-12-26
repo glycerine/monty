@@ -104,47 +104,6 @@ $ monty
 
 When you have finished, type `Ctrl-D` to close the REPL's input stream. 
 
-### Contributing
-
-We welcome submissions but please let us know what you're working on
-if you want to change or add to the Starlark repository.
-
-Before undertaking to write something new for the Starlark project,
-please file an issue or claim an existing issue.
-All significant changes to the language or to the interpreter's Go
-API must be discussed before they can be accepted.
-This gives all participants a chance to validate the design and to
-avoid duplication of effort.
-
-Despite some differences, the Go implementation of Starlark strives to
-match the behavior of [the Java implementation](https://github.com/bazelbuild/bazel)
-used by Bazel and maintained by the Bazel team.
-For that reason, proposals to change the language itself should
-generally be directed to [the Starlark site](
-https://github.com/bazelbuild/starlark/), not to the maintainers of this
-project.
-Only once there is consensus that a language change is desirable may
-its Go implementation proceed.
-
-We use GitHub pull requests for contributions.
-
-Please complete Google's contributor license agreement (CLA) before
-sending your first change to the project.  If you are the copyright
-holder, you will need to agree to the
-[individual contributor license agreement](https://cla.developers.google.com/about/google-individual),
-which can be completed online.
-If your organization is the copyright holder, the organization will
-need to agree to the [corporate contributor license agreement](https://cla.developers.google.com/about/google-corporate).
-If the copyright holder for your contribution has already completed
-the agreement in connection with another Google open source project,
-it does not need to be completed again.
-
-### Stability
-
-We reserve the right to make breaking language and API changes at this
-stage in the project, although we will endeavor to keep them to a minimum.
-Once the Bazel team has finalized the version 1 language specification,
-we will be more rigorous with interface stability.
 
 ### Credits
 
