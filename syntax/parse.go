@@ -23,6 +23,8 @@ const (
 	RetainComments Mode = 1 << iota // retain comments in AST; see Node.Comments
 )
 
+var oneLiteral = &Literal{Token: INT, Raw: "1", Value: int64(1)}
+
 // Parse parses the input data and returns the corresponding parse tree.
 //
 // If src != nil, ParseFile parses the source from src and the filename
@@ -114,6 +116,7 @@ func (p *parser) parseStmt(stmts []Stmt) []Stmt {
 	} else if p.tok == WHILE {
 		return append(stmts, p.parseWhileStmt())
 	}
+
 	return p.parseSimpleStmt(stmts)
 }
 
@@ -269,6 +272,16 @@ func (p *parser) parseSmallStmt() Stmt {
 		pos := p.nextToken() // consume op
 		rhs := p.parseExpr(false)
 		return &AssignStmt{OpPos: pos, Op: op, LHS: x, RHS: rhs}
+
+	case PLUSPLUS:
+		op := PLUS_EQ
+		pos := p.nextToken() // consume op
+		return &AssignStmt{OpPos: pos, Op: op, LHS: x, RHS: oneLiteral}
+
+	case MINUSMINUS:
+		op := MINUS_EQ
+		pos := p.nextToken() // consume op
+		return &AssignStmt{OpPos: pos, Op: op, LHS: x, RHS: oneLiteral}
 	}
 
 	// Expression statement (e.g. function call, doc string).
@@ -598,16 +611,16 @@ var precedence [maxToken]int8
 // Unary MINUS, unary PLUS, and TILDE have higher precedence so are handled in parsePrimary.
 // See https://github.com/google/starlark-go/blob/master/doc/spec.md#binary-operators
 var preclevels = [...][]Token{
-	{OR},                                   // or
-	{AND},                                  // and
-	{NOT},                                  // not (unary)
+	{OR},  // or
+	{AND}, // and
+	{NOT}, // not (unary)
 	{EQL, NEQ, LT, GT, LE, GE, IN, NOT_IN}, // == != < > <= >= in not in
-	{PIPE},                                 // |
-	{CIRCUMFLEX},                           // ^
-	{AMP},                                  // &
-	{LTLT, GTGT},                           // << >>
-	{MINUS, PLUS},                          // -
-	{STAR, PERCENT, SLASH, SLASHSLASH},     // * % / //
+	{PIPE},                             // |
+	{CIRCUMFLEX},                       // ^
+	{AMP},                              // &
+	{LTLT, GTGT},                       // << >>
+	{MINUS, PLUS},                      // -
+	{STAR, PERCENT, SLASH, SLASHSLASH}, // * % / //
 }
 
 func init() {

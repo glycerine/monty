@@ -79,6 +79,8 @@ const (
 	GTGT_EQ       // >>=
 	STARSTAR      // **
 	COLONEQUAL    // :=
+	PLUSPLUS      // ++, increment number
+	MINUSMINUS    // --, decrement number
 
 	// Keywords
 	AND
@@ -165,6 +167,8 @@ var tokenNames = [...]string{
 	GTGT_EQ:       ">>=",
 	STARSTAR:      "**",
 	COLONEQUAL:    ":=",
+	PLUSPLUS:      "++",
+	MINUSMINUS:    "--",
 	AND:           "and",
 	BREAK:         "break",
 	CONTINUE:      "continue",
@@ -648,7 +652,16 @@ start:
 	case '=', '<', '>', '!', '+', '-', '%', '/', '&', '|', '^', '~': // possibly followed by '='
 		start := sc.pos
 		sc.readRune()
-		if sc.peekRune() == '=' {
+		pk := sc.peekRune()
+		if pk == '+' && c == '+' {
+			sc.readRune()
+			return PLUSPLUS
+		}
+		if pk == '-' && c == '-' {
+			sc.readRune()
+			return MINUSMINUS
+		}
+		if pk == '=' {
 			sc.readRune()
 			switch c {
 			case '<':
