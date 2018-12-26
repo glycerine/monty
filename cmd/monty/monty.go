@@ -14,7 +14,6 @@ import (
 	"os"
 	"runtime/pprof"
 	"sort"
-	"strings"
 
 	"github.com/glycerine/monty/repl"
 	"github.com/glycerine/monty/resolve"
@@ -60,12 +59,15 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	thread := &starlark.Thread{Load: repl.MakeLoad()}
-	//globals := make(starlark.StringDict)
+	env := repl.NewMontyEnv()
 
-	globals, err := starlarktest.LoadAssertModule()
+	asserts, err := starlarktest.LoadAssertModule()
 	if err != nil {
 		panic(err)
+	}
+
+	for k, v := range asserts {
+		env.GlobalDict[k] = v
 	}
 
 	switch {
@@ -83,30 +85,25 @@ func main() {
 			// Execute specified file.
 			filename = flag.Arg(0)
 		}
-		thread.Name = "exec " + filename
-		back, err := starlark.ExecFile(thread, filename, src, globals)
+		env.Thread.Name = "exec " + filename
+		back, err := starlark.ExecFile(env.Thread, filename, src, env.GlobalDict)
 		if err != nil {
 			repl.PrintError(err)
 			os.Exit(1)
 		}
 
-		vv("before merge, globals = '%s'", globals)
-		vv("back = '%s'", back)
-
 		// merge back into globals
 		for k, v := range back {
-			globals[k] = v
+			env.GlobalDict[k] = v
 		}
-
-		vv("after merge globals = '%s'", globals)
 
 	case flag.NArg() == 0:
 		fmt.Println("Welcome to Monty (github.com/glycerine/monty)")
-		thread.Name = "REPL"
 
-		vv("before REPL, globals = '%s'", globals)
+		//vv("before REPL, globals = '%s'", env.GlobalDict)
 
-		repl.REPL(thread, globals)
+		repl.REPL(env.Thread, env.GlobalDict)
+		//repl.REPL(thread, globals)
 	default:
 		log.Fatal("want at most one Monty file name")
 	}
@@ -114,14 +111,14 @@ func main() {
 	// Print the global environment.
 	if *showenv {
 		var names []string
-		for name := range globals {
-			if !strings.HasPrefix(name, "_") {
-				names = append(names, name)
-			}
+		for name := range env.GlobalDict {
+			//if !strings.HasPrefix(name, "_") {
+			names = append(names, name)
+			//}
 		}
 		sort.Strings(names)
 		for _, name := range names {
-			fmt.Fprintf(os.Stderr, "%s = %s\n", name, globals[name])
+			fmt.Fprintf(os.Stderr, "%s = %s\n", name, env.GlobalDict[name])
 		}
 	}
 }

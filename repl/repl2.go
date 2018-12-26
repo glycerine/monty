@@ -64,12 +64,20 @@ var vv = verb.VV
 type MontyEnv struct {
 	InitDone bool
 
-	// GoGlobal are translated into GlobalDict
+	// GoGlobal -> translated into GlobalDict
 	GoGlobal   map[string]interface{}
 	GlobalDict starlark.StringDict
 
 	ScriptCache *starlight.Cache
 	Thread      *starlark.Thread
+}
+
+func NewMontyEnv() *MontyEnv {
+	e := &MontyEnv{
+		GoGlobal: make(map[string]interface{}),
+	}
+	e.Init()
+	return e
 }
 
 func (env *MontyEnv) Init() {
@@ -144,7 +152,7 @@ func (env *MontyEnv) Init() {
 	env.InitDone = true
 
 	env.Thread = &starlark.Thread{
-		Name: "REPL",
+		Name: "montyREPL",
 		Load: env.ScriptCache.Load,
 	}
 
@@ -172,7 +180,7 @@ func (env *MontyEnv) Eval(code string) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("starlark evaluation error: '%v'; on code: '%s'", err, string(code))
+		return fmt.Errorf("monty evaluation error: '%v'; on code: '%s'", err, string(code))
 	}
 	return nil
 }
@@ -181,9 +189,4 @@ func panicOn(err error) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func SetupStarlarkReflectionAndLibs(env *MontyEnv) {
-
-	env.Init()
 }
