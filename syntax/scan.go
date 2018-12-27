@@ -147,7 +147,7 @@ var tokenNames = [...]string{
 	LBRACK:        "[",
 	RBRACK:        "]",
 	LBRACE:        "{",
-	RBRACE:        "]",
+	RBRACE:        "}",
 	LT:            "<",
 	GT:            ">",
 	GE:            ">=",
