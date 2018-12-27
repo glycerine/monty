@@ -392,6 +392,11 @@ loop:
 				break loop
 			}
 
+		case compile.NATIVESTRUCT:
+			vv("NATIVESTRUCT seen.")
+			// done setting data fields on the starlark Struct,
+			// convert to native struct possible now.
+
 		case compile.SETDICT, compile.SETDICTUNIQ:
 			dict := stack[sp-3].(*Dict)
 			k := stack[sp-2]

@@ -61,6 +61,15 @@ import (
 
 var vv = verb.VV
 
+type TestBar struct {
+	Height int
+	Width  int
+}
+
+func MakeTestBar() *TestBar {
+	return &TestBar{}
+}
+
 type MontyEnv struct {
 	InitDone bool
 
@@ -87,6 +96,9 @@ func (env *MontyEnv) Init() {
 	if env.InitDone {
 		return
 	}
+
+	env.GoGlobal["MakeTestBar"] = MakeTestBar
+	env.GoGlobal["TestBar"] = &TestBar{}
 
 	env.GoGlobal["strconv"] = shadow_strconv.Pkg
 	env.GoGlobal["strings"] = shadow_strings.Pkg

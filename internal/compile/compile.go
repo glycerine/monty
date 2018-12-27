@@ -103,6 +103,7 @@ const (
 	MAKEDICT      //              - MAKEDICT dict
 	SETMAKESTRUCT //           name SETMAKESTRUCT struct
 	STRUCTKV      // struct fld val STRUCTKV -
+	NATIVESTRUCT  //starlark.Struct NATIVESTUCT starlight.GoStruct [once bulding the starlark.Struct is done]
 
 	// --- opcodes with an argument must go below this line ---
 
@@ -176,6 +177,7 @@ var opcodeNames = [...]string{
 	MAKEDICT:      "makedict",
 	SETMAKESTRUCT: "setmakestruct",
 	STRUCTKV:      "structkv",
+	NATIVESTRUCT:  "nativestruct",
 	MAKEFUNC:      "makefunc",
 	MAKELIST:      "makelist",
 	MAKETUPLE:     "maketuple",
@@ -246,6 +248,7 @@ var stackEffect = [...]int8{
 	LTLT:          -1,
 	MAKEDICT:      +1,
 	SETMAKESTRUCT: 0,
+	NATIVESTRUCT:  0,
 	STRUCTKV:      -3,
 	MAKEFUNC:      -1,
 	MAKELIST:      variableStackEffect,
@@ -1264,7 +1267,7 @@ func (fcomp *fcomp) expr(e syntax.Expr) {
 				fcomp.setPos(entry.Colon)
 				fcomp.emit(STRUCTKV)
 			}
-
+			fcomp.emit(NATIVESTRUCT) // end of struct fields. check and convert to native if available.
 		} else {
 			fcomp.emit(MAKEDICT)
 			for _, entry := range e.List {

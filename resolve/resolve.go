@@ -90,7 +90,7 @@ const doesnt = "this Starlark dialect does not "
 // features of the BUILD language, so we put them behind flags.
 var (
 	AllowNestedDef      = false // allow def statements within function bodies
-	AllowLambda         = false // allow lambda expressions
+	AllowLambda         = true  // allow lambda expressions
 	AllowFloat          = false // allow floating point literals, the 'float' built-in, and x / y
 	AllowSet            = false // allow the 'set' built-in
 	AllowGlobalReassign = false // allow reassignment to globals declared in same file (deprecated)
