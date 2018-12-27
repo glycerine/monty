@@ -28,7 +28,36 @@ Major additions:
 [x] Preliminary complex128 number support. The `cmplx` package is available.
 [x] string(raw) will coerce raw []byte to a string; useful in
       `fmt.Printf("%s\n", string(exec.Command("ls", "-al").CombinedOutput())[0])`, for example.
-      Try the above at the monty prompt. It works.
+      Try the above at the monty prompt. It works:
+
+$ monty
+Welcome to Monty (https://github.com/glycerine/monty), a dialect of Python.
+>>> fmt.Printf("%s\n", string(exec.Command("ls", "-al").CombinedOutput())[0])
+total 40
+drwxr-xr-x   20 mysel  staff   640 Dec 26 20:40 .
+drwxrwxr-x  198 mysel  staff  6336 Dec 25 15:27 ..
+drwxr-xr-x   13 mysel  staff   416 Dec 26 20:37 .git
+-rw-r--r--    1 mysel  staff    89 Dec 25 15:27 .travis.yml
+-rw-r--r--    1 mysel  staff  1589 Dec 25 16:01 LICENSE
+-rw-r--r--    1 mysel  staff    42 Dec 25 15:58 Makefile
+-rw-r--r--    1 mysel  staff  5165 Dec 26 20:40 README.md
+drwxr-xr-x    4 mysel  staff   128 Dec 25 18:15 cmd
+drwxr-xr-x    4 mysel  staff   128 Dec 25 15:27 doc
+drwxr-xr-x   12 mysel  staff   384 Dec 25 15:47 docs
+drwxr-xr-x    4 mysel  staff   128 Dec 25 15:27 internal
+drwxr-xr-x   25 mysel  staff   800 Dec 25 18:04 lib
+drwxr-xr-x    5 mysel  staff   160 Dec 26 20:05 repl
+drwxr-xr-x    5 mysel  staff   160 Dec 26 18:20 resolve
+drwxr-xr-x   16 mysel  staff   512 Dec 26 19:49 starlark
+drwxr-xr-x    5 mysel  staff   160 Dec 26 20:12 starlarkstruct
+drwxr-xr-x    4 mysel  staff   128 Dec 26 19:12 starlarktest
+drwxr-xr-x   12 mysel  staff   384 Dec 26 17:28 syntax
+drwxr-xr-x    3 mysel  staff    96 Dec 25 15:34 vendor
+drwxr-xr-x    3 mysel  staff    96 Dec 25 17:12 verb
+
+1114
+>>> # ctrl-D to exit
+$
 ~~~
 
 Monty uses reflection code from Nate Finch's https://github.com/starlight-go/starlight
