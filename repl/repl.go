@@ -44,7 +44,7 @@ var interrupted = make(chan os.Signal, 1)
 // SIGINT (Control-C). Client-supplied global functions may use this
 // context to make long-running operations interruptable.
 //
-func REPL(thread *starlark.Thread, globals starlark.StringDict) {
+func REPL(thread *starlark.Thread, globals *starlark.StringDict) {
 	signal.Notify(interrupted, os.Interrupt)
 	defer signal.Stop(interrupted)
 
@@ -70,7 +70,7 @@ func REPL(thread *starlark.Thread, globals starlark.StringDict) {
 //
 // It returns an error (possibly readline.ErrInterrupt)
 // only if readline failed. Starlark errors are printed.
-func rep(rl *readline.Instance, thread *starlark.Thread, globals starlark.StringDict) error {
+func rep(rl *readline.Instance, thread *starlark.Thread, globals *starlark.StringDict) error {
 	// Each item gets its own context,
 	// which is cancelled by a SIGINT.
 	//
@@ -162,7 +162,7 @@ func rep(rl *readline.Instance, thread *starlark.Thread, globals starlark.String
 }
 
 // execFileNoFreeze is starlark.ExecFile without globals.Freeze().
-func execFileNoFreeze(thread *starlark.Thread, src interface{}, globals starlark.StringDict) error {
+func execFileNoFreeze(thread *starlark.Thread, src interface{}, globals *starlark.StringDict) error {
 	_, prog, err := starlark.SourceProgram("<stdin>", src, globals.Has)
 	if err != nil {
 		return err
@@ -175,8 +175,8 @@ func execFileNoFreeze(thread *starlark.Thread, src interface{}, globals starlark
 
 	// Copy globals back to the caller's map.
 	// If execution failed, some globals may be undefined.
-	for k, v := range res {
-		globals[k] = v
+	for k, v := range res.Map {
+		globals.Map[k] = v
 	}
 
 	return err
@@ -195,15 +195,15 @@ func PrintError(err error) {
 // MakeLoad returns a simple sequential implementation of module loading
 // suitable for use in the REPL.
 // Each function returned by MakeLoad accesses a distinct private cache.
-func MakeLoad() func(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+func MakeLoad() func(thread *starlark.Thread, module string) (*starlark.StringDict, error) {
 	type entry struct {
-		globals starlark.StringDict
+		globals *starlark.StringDict
 		err     error
 	}
 
 	var cache = make(map[string]*entry)
 
-	return func(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+	return func(thread *starlark.Thread, module string) (*starlark.StringDict, error) {
 		e, ok := cache[module]
 		if e == nil {
 			if ok {

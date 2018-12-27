@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/starlight-go/starlight/convert"
 	"github.com/glycerine/monty/resolve"
 	"github.com/glycerine/monty/starlark"
+	"github.com/starlight-go/starlight/convert"
 )
 
 func init() {
@@ -22,7 +22,7 @@ func init() {
 
 // LoadFunc is a function that tells starlark how to find and load other scripts
 // using the load() function.  If you don't use load() in your scripts, you can pass in nil.
-type LoadFunc func(thread *starlark.Thread, module string) (starlark.StringDict, error)
+type LoadFunc func(thread *starlark.Thread, module string) (*starlark.StringDict, error)
 
 // Eval evaluates the starlark source with the given global variables. The type
 // of the argument for the src parameter must be string (filename), []byte, or io.Reader.
@@ -93,7 +93,7 @@ func WithGlobals(globals map[string]interface{}, dirs ...string) (*Cache, error)
 	return newCache(dirs, g), nil
 }
 
-func newCache(dirs []string, globals starlark.StringDict) *Cache {
+func newCache(dirs []string, globals *starlark.StringDict) *Cache {
 	c := &Cache{
 		dirs:    dirs,
 		scripts: map[string]*starlark.Program{},
@@ -135,7 +135,7 @@ func (c *Cache) Run(filename string, globals map[string]interface{}) (map[string
 	return run(p, globals, c.Load)
 }
 
-func (c *Cache) Load(_ *starlark.Thread, module string) (starlark.StringDict, error) {
+func (c *Cache) Load(_ *starlark.Thread, module string) (*starlark.StringDict, error) {
 	return c.cache.Load(module)
 }
 
@@ -170,7 +170,7 @@ func (c *Cache) Forget(filename string) {
 }
 
 // RunOnDict avoids allocating and reallocating maps.
-func (c *Cache) RunOnDict(filename string, globals starlark.StringDict) (starlark.StringDict, error) {
+func (c *Cache) RunOnDict(filename string, globals *starlark.StringDict) (*starlark.StringDict, error) {
 
 	c.mu.Lock()
 	if p, ok := c.scripts[filename]; ok {
@@ -193,6 +193,6 @@ func (c *Cache) RunOnDict(filename string, globals starlark.StringDict) (starlar
 	return runOnDict(p, globals, c.Load)
 }
 
-func runOnDict(p *starlark.Program, globals starlark.StringDict, load LoadFunc) (starlark.StringDict, error) {
+func runOnDict(p *starlark.Program, globals *starlark.StringDict, load LoadFunc) (*starlark.StringDict, error) {
 	return p.Init(&starlark.Thread{Load: load}, globals)
 }

@@ -66,8 +66,8 @@ func main() {
 		panic(err)
 	}
 
-	for k, v := range asserts {
-		env.GlobalDict[k] = v
+	for k, v := range asserts.Map {
+		env.GlobalDict.Map[k] = v
 	}
 
 	switch {
@@ -93,8 +93,8 @@ func main() {
 		}
 
 		// merge back into globals
-		for k, v := range back {
-			env.GlobalDict[k] = v
+		for k, v := range back.Map {
+			env.GlobalDict.Map[k] = v
 		}
 
 	case flag.NArg() == 0:
@@ -111,14 +111,14 @@ func main() {
 	// Print the global environment.
 	if *showenv {
 		var names []string
-		for name := range env.GlobalDict {
+		for name := range env.GlobalDict.Map {
 			//if !strings.HasPrefix(name, "_") {
 			names = append(names, name)
 			//}
 		}
 		sort.Strings(names)
 		for _, name := range names {
-			fmt.Fprintf(os.Stderr, "%s = %s\n", name, env.GlobalDict[name])
+			fmt.Fprintf(os.Stderr, "%s = %s\n", name, env.GlobalDict.Map[name])
 		}
 	}
 }

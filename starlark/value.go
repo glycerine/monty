@@ -556,7 +556,7 @@ type Function struct {
 	freevars Tuple
 
 	// These fields are shared by all functions in a module.
-	predeclared StringDict
+	predeclared *StringDict
 	globals     []Value
 	constants   []Value
 }
@@ -569,13 +569,49 @@ func (fn *Function) String() string        { return toString(fn) }
 func (fn *Function) Type() string          { return "function" }
 func (fn *Function) Truth() Bool           { return true }
 
+func NewStringDict(n int) *StringDict {
+	return &StringDict{
+		Map:   make(map[string]Value, n),
+		Immut: make(map[string]bool, n),
+	}
+}
+
+func NewStringDictWith(kvpair ...interface{}) *StringDict {
+	d := &StringDict{
+		Map:   make(map[string]Value),
+		Immut: make(map[string]bool),
+	}
+	n := len(kvpair)
+	if n == 0 {
+		return d
+	}
+	if n%2 != 0 {
+		panic("must call NewStringDictWith with an " +
+			"even number of key-value (string:Value) pairs")
+	}
+	for i := 0; i < n; i += 2 {
+		k, ok := kvpair[i].(string)
+		if !ok {
+			panic(fmt.Errorf("could not convert i=%[1]v key "+
+				"to string, was type %[2]T/val=%[2]v", i, kvpair[i]))
+		}
+		v, ok := kvpair[i+1].(Value)
+		if !ok {
+			panic(fmt.Errorf("could not convert i=%[1]v value "+
+				"to Value, was type %[2]T/val=%[2]v", i+1, kvpair[i+1]))
+		}
+		d.Map[k] = v
+	}
+	return d
+}
+
 // Globals returns a new, unfrozen StringDict containing all global
 // variables so far defined in the function's module.
-func (fn *Function) Globals() StringDict {
-	m := make(StringDict, len(fn.funcode.Prog.Globals))
+func (fn *Function) Globals() *StringDict {
+	m := NewStringDict(len(fn.funcode.Prog.Globals))
 	for i, id := range fn.funcode.Prog.Globals {
 		if v := fn.globals[i]; v != nil {
-			m[id.Name] = v
+			m.Map[id.Name] = v
 		}
 	}
 	return m
@@ -666,13 +702,28 @@ func (d *Dict) Freeze()                                         { d.ht.freeze() 
 func (d *Dict) Truth() Bool                                     { return d.Len() > 0 }
 func (d *Dict) Hash() (uint32, error)                           { return 0, fmt.Errorf("unhashable type: dict") }
 
-func (d *Dict) Attr(name string) (Value, error) { return builtinAttr(d, name, dictMethods) }
-func (d *Dict) AttrNames() []string             { return builtinAttrNames(dictMethods) }
+func (d *Dict) Attr(name string) (Value, error) {
+	v, found, err := d.ht.lookup(String(name))
+	if err != nil {
+		return nil, err // jea: or nil, nil?
+	}
+	if found {
+		return v, nil
+	}
+	return builtinAttr(d, name, dictMethods)
+}
+func (d *Dict) AttrNames() []string { return builtinAttrNames(dictMethods) }
 
+/*
 // insert with a dot expression such as "x.f = y".
 func (d *Dict) SetField(name string, val Value) error {
+	_, builtin := dictMethods[name]
+	if builtin {
+       panic("ouch")
+	}
 	return d.ht.insert(String(name), val)
 }
+*/
 
 func (x *Dict) CompareSameType(op syntax.Token, y_ Value, depth int) (bool, error) {
 	y := y_.(*Dict)

@@ -135,23 +135,23 @@ func FromValue(v starlark.Value) interface{} {
 
 // MakeStringDict makes a StringDict from the given arg. The types supported are
 // the same as ToValue.
-func MakeStringDict(m map[string]interface{}) (starlark.StringDict, error) {
-	dict := make(starlark.StringDict, len(m))
+func MakeStringDict(m map[string]interface{}) (*starlark.StringDict, error) {
+	dict := starlark.NewStringDict(len(m))
 	for k, v := range m {
 		val, err := ToValue(v)
 		if err != nil {
 			return nil, err
 		}
-		dict[k] = val
+		dict.Map[k] = val
 	}
 	return dict, nil
 }
 
 // FromStringDict makes a map[string]interface{} from the given arg.  Any
 // unconvertible values are ignored.
-func FromStringDict(m starlark.StringDict) map[string]interface{} {
-	ret := make(map[string]interface{}, len(m))
-	for k, v := range m {
+func FromStringDict(m *starlark.StringDict) map[string]interface{} {
+	ret := make(map[string]interface{}, len(m.Map))
+	for k, v := range m.Map {
 		ret[k] = FromValue(v)
 	}
 	return ret

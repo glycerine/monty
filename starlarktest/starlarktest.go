@@ -51,20 +51,22 @@ func GetReporter(thread *starlark.Thread) Reporter {
 
 var (
 	once      sync.Once
-	assert    starlark.StringDict
+	assert    *starlark.StringDict
 	assertErr error
 )
 
 // LoadAssertModule loads the assert module.
 // It is concurrency-safe and idempotent.
-func LoadAssertModule() (starlark.StringDict, error) {
+func LoadAssertModule() (*starlark.StringDict, error) {
 	once.Do(func() {
-		predeclared := starlark.StringDict{
+		predeclared := &starlark.StringDict{Map: map[string]starlark.Value{
 			"error":   starlark.NewBuiltin("error", error_),
 			"catch":   starlark.NewBuiltin("catch", catch),
 			"matches": starlark.NewBuiltin("matches", matches),
 			"struct":  starlark.NewBuiltin("struct", starlarkstruct.Make),
 			"_freeze": starlark.NewBuiltin("freeze", freeze),
+		},
+			Immut: make(map[string]bool),
 		}
 		filename := DataFile("starlarktest", "assert.star")
 		thread := new(starlark.Thread)

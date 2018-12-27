@@ -45,7 +45,7 @@ type Thread struct {
 	// The error message need not include the module name.
 	//
 	// See example_test.go for some example implementations of Load.
-	Load func(thread *Thread, module string) (StringDict, error)
+	Load func(thread *Thread, module string) (*StringDict, error)
 
 	// locals holds arbitrary "thread-local" Go values belonging to the client.
 	// They are accessible to the client but not to any Starlark program.
@@ -76,13 +76,16 @@ func (thread *Thread) TopFrame() *Frame { return thread.frame }
 // A StringDict is a mapping from names to values, and represents
 // an environment such as the global variables of a module.
 // It is now also a true starlark.Value.
-type StringDict map[string]Value
+type StringDict struct {
+	Map   map[string]Value
+	Immut map[string]bool
+}
 
 // String packs the keys and stingified values of d
 // in a human readable string.
 func (d StringDict) String() string {
-	names := make([]string, 0, len(d))
-	for name := range d {
+	names := make([]string, 0, len(d.Map))
+	for name := range d.Map {
 		names = append(names, name)
 	}
 	sort.Strings(names)
@@ -95,7 +98,7 @@ func (d StringDict) String() string {
 		buf.WriteString(sep)
 		buf.WriteString(name)
 		buf.WriteString(": ")
-		writeValue(&buf, d[name], path)
+		writeValue(&buf, d.Map[name], path)
 		sep = ", "
 	}
 	buf.WriteByte('}')
@@ -104,7 +107,8 @@ func (d StringDict) String() string {
 
 // Freeze makes d immutable.
 func (d StringDict) Freeze() {
-	for _, v := range d {
+	for k, v := range d.Map {
+		d.Immut[k] = true
 		v.Freeze()
 	}
 }
@@ -117,12 +121,20 @@ func (d StringDict) Hash() (uint32, error) {
 
 // Truth will return true if and only if d holds at least one key.
 func (d StringDict) Truth() Bool {
-	return len(d) > 0
+	return len(d.Map) > 0
 }
 
 // Type returns "StringDict".
 func (d StringDict) Type() string {
 	return "StringDict"
+}
+
+func (d *StringDict) SetField(name string, val Value) error {
+	if d.Immut[name] {
+		return fmt.Errorf("StringDict error: cannot change immutable field '%s'", name)
+	}
+	d.Map[name] = val
+	return nil
 }
 
 // Get searches d for key.
@@ -135,14 +147,14 @@ func (d StringDict) Get(key Value) (v Value, found bool, err error) {
 	default:
 		skey = key.String()
 	}
-	v, found = d[skey]
+	v, found = d.Map[skey]
 	return
 }
 
 // Attr looks up name and returns (nil, nil) if the
 // name attribute is not present.
 func (d StringDict) Attr(name string) (Value, error) {
-	v, ok := d[name]
+	v, ok := d.Map[name]
 	if !ok {
 		return nil, nil
 	}
@@ -151,8 +163,8 @@ func (d StringDict) Attr(name string) (Value, error) {
 
 // AttrNames returns all keys in d.
 func (d StringDict) AttrNames() []string {
-	names := make([]string, 0, len(d))
-	for name := range d {
+	names := make([]string, 0, len(d.Map))
+	for name := range d.Map {
 		names = append(names, name)
 	}
 	sort.Strings(names)
@@ -160,7 +172,7 @@ func (d StringDict) AttrNames() []string {
 }
 
 // Has reports whether the dictionary contains the specified key.
-func (d StringDict) Has(key string) bool { _, ok := d[key]; return ok }
+func (d StringDict) Has(key string) bool { _, ok := d.Map[key]; return ok }
 
 // A Frame records a call to a Starlark function (including module toplevel)
 // or a built-in function or method.
@@ -301,11 +313,14 @@ func (prog *Program) Write(out io.Writer) error {
 //
 // If ExecFile fails during evaluation, it returns an *EvalError
 // containing a backtrace.
-func ExecFile(thread *Thread, filename string, src interface{}, predeclared StringDict) (StringDict, error) {
+func ExecFile(thread *Thread, filename string, src interface{}, predeclared *StringDict) (*StringDict, error) {
 	// Parse, resolve, and compile a Starlark source file.
+	if predeclared == nil {
+		predeclared = NewStringDict(0)
+	}
 	_, mod, err := SourceProgram(filename, src, predeclared.Has)
 	if err != nil {
-		return nil, err
+		return &StringDict{}, err
 	}
 
 	g, err := mod.Init(thread, predeclared)
@@ -361,7 +376,7 @@ func CompiledProgram(in io.Reader) (*Program, error) {
 // Init creates a set of global variables for the program,
 // executes the toplevel code of the specified program,
 // and returns a new, unfrozen dictionary of the globals.
-func (prog *Program) Init(thread *Thread, predeclared StringDict) (StringDict, error) {
+func (prog *Program) Init(thread *Thread, predeclared *StringDict) (*StringDict, error) {
 	toplevel := makeToplevelFunction(prog.compiled.Toplevel, predeclared)
 
 	_, err := Call(thread, toplevel, nil, nil)
@@ -371,7 +386,7 @@ func (prog *Program) Init(thread *Thread, predeclared StringDict) (StringDict, e
 	return toplevel.Globals(), err
 }
 
-func makeToplevelFunction(funcode *compile.Funcode, predeclared StringDict) *Function {
+func makeToplevelFunction(funcode *compile.Funcode, predeclared *StringDict) *Function {
 	// Create the Starlark value denoted by each program constant c.
 	constants := make([]Value, len(funcode.Prog.Constants))
 	for i, c := range funcode.Prog.Constants {
@@ -409,7 +424,7 @@ func makeToplevelFunction(funcode *compile.Funcode, predeclared StringDict) *Fun
 //
 // If Eval fails during evaluation, it returns an *EvalError
 // containing a backtrace.
-func Eval(thread *Thread, filename string, src interface{}, env StringDict) (Value, error) {
+func Eval(thread *Thread, filename string, src interface{}, env *StringDict) (Value, error) {
 	f, err := ExprFunc(filename, src, env)
 	if err != nil {
 		return nil, err
@@ -419,10 +434,13 @@ func Eval(thread *Thread, filename string, src interface{}, env StringDict) (Val
 
 // ExprFunc returns a no-argument function
 // that evaluates the expression whose source is src.
-func ExprFunc(filename string, src interface{}, env StringDict) (*Function, error) {
+func ExprFunc(filename string, src interface{}, env *StringDict) (*Function, error) {
 	expr, err := syntax.ParseExpr(filename, src, 0)
 	if err != nil {
 		return nil, err
+	}
+	if env == nil {
+		env = NewStringDict(0)
 	}
 
 	locals, err := resolve.Expr(expr, env.Has, Universe.Has)

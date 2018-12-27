@@ -33,12 +33,12 @@ func Benchmark(b *testing.B) {
 
 		// Repeatedly call each global function named bench_* as a benchmark.
 		var names []string
-		for name := range globals {
+		for name := range globals.Map {
 			names = append(names, name)
 		}
 		sort.Strings(names)
 		for _, name := range names {
-			value := globals[name]
+			value := globals.Map[name]
 			if fn, ok := value.(*starlark.Function); ok && strings.HasPrefix(name, "bench_") {
 				b.Run(name, func(b *testing.B) {
 					for i := 0; i < b.N; i++ {
@@ -74,7 +74,7 @@ func BenchmarkProgram(b *testing.B) {
 	b.Run("compile", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			var err error
-			_, prog, err = starlark.SourceProgram(filename, src, starlark.StringDict(nil).Has)
+			_, prog, err = starlark.SourceProgram(filename, src, starlark.NewStringDict(0).Has)
 			if err != nil {
 				b.Fatal(err)
 			}

@@ -243,3 +243,11 @@ _ = {
         ("three", 3),
     ]
 }
+
+---
+## set and get with dot:
+#load("assert.star", "assert")
+#
+#d={}
+#d.a = 1
+#assert.eq(d.a+1, 2)

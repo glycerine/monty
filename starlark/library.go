@@ -31,11 +31,11 @@ import (
 // universe dictionary before Starlark evaluation begins.
 // All values in the dictionary must be immutable.
 // Starlark programs cannot modify the dictionary.
-var Universe StringDict
+var Universe *StringDict
 
 func init() {
 	// https://github.com/google/starlark-go/blob/master/doc/spec.md#built-in-constants-and-functions
-	Universe = StringDict{
+	Universe = &StringDict{Map: map[string]Value{
 		"None":      None,
 		"True":      True,
 		"False":     False,
@@ -66,7 +66,7 @@ func init() {
 		"tuple":     NewBuiltin("tuple", tuple),
 		"type":      NewBuiltin("type", type_),
 		"zip":       NewBuiltin("zip", zip),
-	}
+	}}
 }
 
 type builtinMethod func(fnname string, recv Value, args Tuple, kwargs []Tuple) (Value, error)

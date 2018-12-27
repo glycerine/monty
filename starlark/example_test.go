@@ -31,8 +31,11 @@ squares = [x*x for x in range(10)]
 		Name:  "example",
 		Print: func(_ *starlark.Thread, msg string) { fmt.Println(msg) },
 	}
-	predeclared := starlark.StringDict{
-		"greeting": starlark.String("hello"),
+	predeclared := &starlark.StringDict{
+		Map: map[string]starlark.Value{
+			"greeting": starlark.String("hello"),
+		},
+		Immut: map[string]bool{},
 	}
 	globals, err := starlark.ExecFile(thread, "apparent/filename.star", data, predeclared)
 	if err != nil {
@@ -44,13 +47,13 @@ squares = [x*x for x in range(10)]
 
 	// Print the global environment.
 	var names []string
-	for name := range globals {
+	for name := range globals.Map {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 	fmt.Println("\nGlobals:")
 	for _, name := range names {
-		v := globals[name]
+		v := globals.Map[name]
 		fmt.Printf("%s (%s) = %s\n", name, v.Type(), v.String())
 	}
 
@@ -71,14 +74,14 @@ func ExampleThread_Load_sequential() {
 	}
 
 	type entry struct {
-		globals starlark.StringDict
+		globals *starlark.StringDict
 		err     error
 	}
 
 	cache := make(map[string]*entry)
 
-	var load func(_ *starlark.Thread, module string) (starlark.StringDict, error)
-	load = func(_ *starlark.Thread, module string) (starlark.StringDict, error) {
+	var load func(_ *starlark.Thread, module string) (*starlark.StringDict, error)
+	load = func(_ *starlark.Thread, module string) (*starlark.StringDict, error) {
 		e, ok := cache[module]
 		if e == nil {
 			if ok {
@@ -106,7 +109,7 @@ func ExampleThread_Load_sequential() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(globals["c"])
+	fmt.Println(globals.Map["c"])
 
 	// Output:
 	// "Hello, world!"
@@ -136,7 +139,7 @@ func ExampleThread_Load_parallel() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			ch <- fmt.Sprintf("%s = %s", name, globals[name])
+			ch <- fmt.Sprintf("%s = %s", name, globals.Map[name])
 		}(name)
 	}
 	got := []string{<-ch, <-ch}
@@ -207,17 +210,17 @@ type cache struct {
 
 type entry struct {
 	owner   unsafe.Pointer // a *cycleChecker; see cycleCheck
-	globals starlark.StringDict
+	globals *starlark.StringDict
 	err     error
 	ready   chan struct{}
 }
 
-func (c *cache) Load(module string) (starlark.StringDict, error) {
+func (c *cache) Load(module string) (*starlark.StringDict, error) {
 	return c.get(new(cycleChecker), module)
 }
 
 // get loads and returns an entry (if not already loaded).
-func (c *cache) get(cc *cycleChecker, module string) (starlark.StringDict, error) {
+func (c *cache) get(cc *cycleChecker, module string) (*starlark.StringDict, error) {
 	c.cacheMu.Lock()
 	e := c.cache[module]
 	if e != nil {
@@ -249,11 +252,11 @@ func (c *cache) get(cc *cycleChecker, module string) (starlark.StringDict, error
 	return e.globals, e.err
 }
 
-func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, error) {
+func (c *cache) doLoad(cc *cycleChecker, module string) (*starlark.StringDict, error) {
 	thread := &starlark.Thread{
 		Name:  "exec " + module,
 		Print: func(_ *starlark.Thread, msg string) { fmt.Println(msg) },
-		Load: func(_ *starlark.Thread, module string) (starlark.StringDict, error) {
+		Load: func(_ *starlark.Thread, module string) (*starlark.StringDict, error) {
 			// Tunnel the cycle-checker state for this "thread of loading".
 			return c.get(cc, module)
 		},

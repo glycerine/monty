@@ -31,9 +31,8 @@ func("a", 1, foo=1, foo=2)
 		return starlark.None, nil
 	}
 
-	globals := map[string]starlark.Value{
-		"func": starlark.NewBuiltin("func", fn),
-	}
+	globals := starlark.NewStringDictWith("func", starlark.NewBuiltin("func", fn))
+
 	globals, err := starlark.ExecFile(thread, "foo.star", data, globals)
 	if err != nil {
 		t.Fatal(err)

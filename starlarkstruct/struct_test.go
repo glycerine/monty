@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/glycerine/monty/starlark"
 	"github.com/glycerine/monty/resolve"
+	"github.com/glycerine/monty/starlark"
 	"github.com/glycerine/monty/starlarkstruct"
 	"github.com/glycerine/monty/starlarktest"
 )
@@ -28,9 +28,11 @@ func Test(t *testing.T) {
 	thread := &starlark.Thread{Load: load}
 	starlarktest.SetReporter(thread, t)
 	filename := filepath.Join(testdata, "testdata/struct.star")
-	predeclared := starlark.StringDict{
+	predeclared := &starlark.StringDict{Map: map[string]starlark.Value{
 		"struct": starlark.NewBuiltin("struct", starlarkstruct.Make),
 		"gensym": starlark.NewBuiltin("gensym", gensym),
+	},
+		Immut: map[string]bool{},
 	}
 	if _, err := starlark.ExecFile(thread, filename, nil, predeclared); err != nil {
 		if err, ok := err.(*starlark.EvalError); ok {
@@ -41,7 +43,7 @@ func Test(t *testing.T) {
 }
 
 // load implements the 'load' operation as used in the evaluator tests.
-func load(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+func load(thread *starlark.Thread, module string) (*starlark.StringDict, error) {
 	if module == "assert.star" {
 		return starlarktest.LoadAssertModule()
 	}
@@ -67,7 +69,7 @@ func (sym *symbol) Name() string          { return sym.name }
 func (sym *symbol) String() string        { return sym.name }
 func (sym *symbol) Type() string          { return "symbol" }
 func (sym *symbol) Freeze()               {} // immutable
-func (sym *symbol) Truth() starlark.Bool   { return starlark.True }
+func (sym *symbol) Truth() starlark.Bool  { return starlark.True }
 func (sym *symbol) Hash() (uint32, error) { return 0, fmt.Errorf("unhashable: %s", sym.Type()) }
 
 func (sym *symbol) CallInternal(thread *starlark.Thread, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {

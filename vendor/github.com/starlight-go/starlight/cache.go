@@ -20,18 +20,18 @@ import (
 type cache struct {
 	cacheMu  sync.Mutex
 	cache    map[string]*entry
-	globals  starlark.StringDict
+	globals  *starlark.StringDict
 	readFile func(s string) ([]byte, error)
 }
 
 type entry struct {
 	owner   unsafe.Pointer // a *cycleChecker; see cycleCheck
-	globals starlark.StringDict
+	globals *starlark.StringDict
 	err     error
 	ready   chan struct{}
 }
 
-func (c *cache) Load(module string) (starlark.StringDict, error) {
+func (c *cache) Load(module string) (*starlark.StringDict, error) {
 	return c.get(new(cycleChecker), module)
 }
 
@@ -48,7 +48,7 @@ func (c *cache) reset() {
 }
 
 // get loads and returns an entry (if not already loaded).
-func (c *cache) get(cc *cycleChecker, module string) (starlark.StringDict, error) {
+func (c *cache) get(cc *cycleChecker, module string) (*starlark.StringDict, error) {
 	c.cacheMu.Lock()
 	e := c.cache[module]
 	if e != nil {
@@ -80,10 +80,10 @@ func (c *cache) get(cc *cycleChecker, module string) (starlark.StringDict, error
 	return e.globals, e.err
 }
 
-func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, error) {
+func (c *cache) doLoad(cc *cycleChecker, module string) (*starlark.StringDict, error) {
 	thread := &starlark.Thread{
 		Print: func(_ *starlark.Thread, msg string) { fmt.Println(msg) },
-		Load: func(_ *starlark.Thread, module string) (starlark.StringDict, error) {
+		Load: func(_ *starlark.Thread, module string) (*starlark.StringDict, error) {
 			// Tunnel the cycle-checker state for this "thread of loading".
 			return c.get(cc, module)
 		},

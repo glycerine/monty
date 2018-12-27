@@ -124,9 +124,12 @@ func TestExecFile(t *testing.T) {
 	} {
 		filename := filepath.Join(testdata, file)
 		for _, chunk := range chunkedfile.Read(filename, t) {
-			predeclared := starlark.StringDict{
-				"hasfields": starlark.NewBuiltin("hasfields", newHasFields),
-				"fibonacci": fib{},
+			predeclared := &starlark.StringDict{
+				Map: map[string]starlark.Value{
+					"hasfields": starlark.NewBuiltin("hasfields", newHasFields),
+					"fibonacci": fib{},
+				},
+				Immut: map[string]bool{},
 			}
 
 			setOptions(chunk.Source)
@@ -177,7 +180,7 @@ func (it *fibIterator) Next(p *starlark.Value) bool {
 func (it *fibIterator) Done() {}
 
 // load implements the 'load' operation as used in the evaluator tests.
-func load(thread *starlark.Thread, module string) (starlark.StringDict, error) {
+func load(thread *starlark.Thread, module string) (*starlark.StringDict, error) {
 	if module == "assert.star" {
 		return starlarktest.LoadAssertModule()
 	}
@@ -188,7 +191,7 @@ func load(thread *starlark.Thread, module string) (starlark.StringDict, error) {
 }
 
 func newHasFields(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	return &hasfields{attrs: make(map[string]starlark.Value)}, nil
+	return &hasfields{attrs: starlark.NewStringDict(0)}, nil
 }
 
 // hasfields is a test-only implementation of HasAttrs.
@@ -196,7 +199,7 @@ func newHasFields(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tu
 // Clients will likely want to provide their own implementation,
 // so we don't have any public implementation.
 type hasfields struct {
-	attrs  starlark.StringDict
+	attrs  *starlark.StringDict
 	frozen bool
 }
 
@@ -213,25 +216,25 @@ func (hf *hasfields) Hash() (uint32, error) { return 42, nil }
 func (hf *hasfields) Freeze() {
 	if !hf.frozen {
 		hf.frozen = true
-		for _, v := range hf.attrs {
+		for _, v := range hf.attrs.Map {
 			v.Freeze()
 		}
 	}
 }
 
-func (hf *hasfields) Attr(name string) (starlark.Value, error) { return hf.attrs[name], nil }
+func (hf *hasfields) Attr(name string) (starlark.Value, error) { return hf.attrs.Map[name], nil }
 
 func (hf *hasfields) SetField(name string, val starlark.Value) error {
 	if hf.frozen {
 		return fmt.Errorf("cannot set field on a frozen hasfields")
 	}
-	hf.attrs[name] = val
+	hf.attrs.Map[name] = val
 	return nil
 }
 
 func (hf *hasfields) AttrNames() []string {
-	names := make([]string, 0, len(hf.attrs))
-	for key := range hf.attrs {
+	names := make([]string, 0, len(hf.attrs.Map))
+	for key := range hf.attrs.Map {
 		names = append(names, key)
 	}
 	return names
@@ -461,7 +464,10 @@ Error: floored division by zero`
 // TestRepeatedExec parses and resolves a file syntax tree once then
 // executes it repeatedly with different values of its predeclared variables.
 func TestRepeatedExec(t *testing.T) {
-	predeclared := starlark.StringDict{"x": starlark.None}
+	predeclared := &starlark.StringDict{
+		Map:   map[string]starlark.Value{"x": starlark.None},
+		Immut: map[string]bool{},
+	}
 	_, prog, err := starlark.SourceProgram("repeat.star", "y = 2 * x", predeclared.Has)
 	if err != nil {
 		t.Fatal(err)
@@ -474,14 +480,14 @@ func TestRepeatedExec(t *testing.T) {
 		{x: starlark.String("mur"), want: starlark.String("murmur")},
 		{x: starlark.Tuple{starlark.None}, want: starlark.Tuple{starlark.None, starlark.None}},
 	} {
-		predeclared["x"] = test.x // update the values in dictionary
+		predeclared.Map["x"] = test.x // update the values in dictionary
 		thread := new(starlark.Thread)
 		if globals, err := prog.Init(thread, predeclared); err != nil {
 			t.Errorf("x=%v: %v", test.x, err) // exec error
-		} else if eq, err := starlark.Equal(globals["y"], test.want); err != nil {
+		} else if eq, err := starlark.Equal(globals.Map["y"], test.want); err != nil {
 			t.Errorf("x=%v: %v", test.x, err) // comparison error
 		} else if !eq {
-			t.Errorf("x=%v: got y=%v, want %v", test.x, globals["y"], test.want)
+			t.Errorf("x=%v: got y=%v, want %v", test.x, globals.Map["y"], test.want)
 		}
 	}
 }
@@ -528,7 +534,7 @@ def somefunc():
 	return 0
 `, nil)
 
-	if globals["somefunc"].(*starlark.Function).Doc() != "somefunc doc" {
+	if globals.Map["somefunc"].(*starlark.Function).Doc() != "somefunc doc" {
 		t.Fatal("docstring not found")
 	}
 }
@@ -561,8 +567,11 @@ func TestFrameLocals(t *testing.T) {
 		got = trace(thread)
 		return starlark.None, nil
 	}
-	predeclared := starlark.StringDict{
-		"builtin": starlark.NewBuiltin("builtin", builtin),
+	predeclared := &starlark.StringDict{
+		Map: map[string]starlark.Value{
+			"builtin": starlark.NewBuiltin("builtin", builtin),
+		},
+		Immut: map[string]bool{},
 	}
 	_, err := starlark.ExecFile(&starlark.Thread{}, "foo.star", `
 def f(x, y): builtin()
@@ -597,10 +606,10 @@ print(pi)
 		fmt.Fprintf(buf, "%s: %s: %s\n",
 			caller.Position(), caller.Callable().Name(), msg)
 	}
-	var mathPkg starlark.StringDict = make(map[string]starlark.Value)
-	mathPkg["Pi"] = starlark.Float(math.Pi)
-	var predec starlark.StringDict = make(map[string]starlark.Value)
-	predec["math"] = mathPkg
+	var mathPkg *starlark.StringDict = starlark.NewStringDict(0)
+	mathPkg.Map["Pi"] = starlark.Float(math.Pi)
+	var predec *starlark.StringDict = starlark.NewStringDict(0)
+	predec.Map["math"] = mathPkg
 
 	thread := &starlark.Thread{Print: print}
 	if _, err := starlark.ExecFile(thread, "foo.star", src, predec); err != nil {

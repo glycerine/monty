@@ -68,7 +68,7 @@ type MontyEnv struct {
 
 	// GoGlobal -> translated into GlobalDict
 	GoGlobal   map[string]interface{}
-	GlobalDict starlark.StringDict
+	GlobalDict *starlark.StringDict
 
 	ScriptCache *starlight.Cache
 	Thread      *starlark.Thread
@@ -143,16 +143,16 @@ func (env *MontyEnv) Init() {
 	panicOn(err)
 	scriptCache := starlight.New(dir)
 
-	var dict starlark.StringDict
+	var dict *starlark.StringDict
 	if len(env.GoGlobal) > 0 {
 		dict, err = convert.MakeStringDict(env.GoGlobal)
 		panicOn(err)
 	} else {
-		dict = make(map[string]starlark.Value)
+		dict = starlark.NewStringDict(0)
 	}
 
 	// add the struct constructor.
-	dict["struct"] = starlark.NewBuiltin("struct", starlarkstruct.Make)
+	dict.Map["struct"] = starlark.NewBuiltin("struct", starlarkstruct.Make)
 
 	env.GlobalDict = dict
 	env.ScriptCache = scriptCache
@@ -174,7 +174,7 @@ func (env *MontyEnv) Eval(code string) error {
 	//vv("pre-global='%#v'", env.GlobalDict.String())
 
 	var err error
-	var back starlark.StringDict
+	var back *starlark.StringDict
 
 	back, err = starlark.ExecFile(env.Thread, "eval.sky", code, env.GlobalDict)
 
@@ -182,8 +182,8 @@ func (env *MontyEnv) Eval(code string) error {
 	//vv("global='%#v'", env.GlobalDict.String())
 
 	// merge back into globals
-	for k, v := range back {
-		env.GlobalDict[k] = v
+	for k, v := range back.Map {
+		env.GlobalDict.Map[k] = v
 	}
 
 	if err != nil {

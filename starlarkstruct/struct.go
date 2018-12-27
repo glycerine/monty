@@ -68,15 +68,15 @@ func FromKeywords(constructor starlark.Value, kwargs []starlark.Tuple) *Struct {
 
 // FromStringDict returns a whose elements are those of d.
 // The constructor parameter specifies the constructor; use Default for an ordinary struct.
-func FromStringDict(constructor starlark.Value, d starlark.StringDict) *Struct {
+func FromStringDict(constructor starlark.Value, d *starlark.StringDict) *Struct {
 	if constructor == nil {
 		panic("nil constructor")
 	}
 	s := &Struct{
 		constructor: constructor,
-		entries:     make(entries, 0, len(d)),
+		entries:     make(entries, 0, len(d.Map)),
 	}
-	for k, v := range d {
+	for k, v := range d.Map {
 		s.entries = append(s.entries, entry{k, v})
 	}
 	sort.Sort(s.entries)
@@ -126,7 +126,7 @@ var (
 // ToStringDict adds a name/value entry to d for each field of the struct.
 func (s *Struct) ToStringDict(d starlark.StringDict) {
 	for _, e := range s.entries {
-		d[e.name] = e.value
+		d.Map[e.name] = e.value
 	}
 }
 
@@ -192,12 +192,12 @@ func (x *Struct) Binary(op syntax.Token, y starlark.Value, side starlark.Side) (
 				x.constructor, y.constructor)
 		}
 
-		z := make(starlark.StringDict, x.len()+y.len())
+		z := starlark.NewStringDict(x.len() + y.len())
 		for _, e := range x.entries {
-			z[e.name] = e.value
+			z.Map[e.name] = e.value
 		}
 		for _, e := range y.entries {
-			z[e.name] = e.value
+			z.Map[e.name] = e.value
 		}
 
 		return FromStringDict(x.constructor, z), nil

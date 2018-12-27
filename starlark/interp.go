@@ -495,7 +495,7 @@ loop:
 
 			for i := 0; i < n; i++ {
 				from := string(stack[sp-1-i].(String))
-				v, ok := dict[from]
+				v, ok := dict.Map[from]
 				if !ok {
 					err = fmt.Errorf("load: name %s not found in module %s", from, module)
 					break loop
@@ -535,7 +535,7 @@ loop:
 
 		case compile.PREDECLARED:
 			name := f.Prog.Names[arg]
-			x := fn.predeclared[name]
+			x := fn.predeclared.Map[name]
 			if x == nil {
 				err = fmt.Errorf("internal error: predeclared variable %s is uninitialized", name)
 				break loop
@@ -544,7 +544,7 @@ loop:
 			sp++
 
 		case compile.UNIVERSAL:
-			stack[sp] = Universe[f.Prog.Names[arg]]
+			stack[sp] = Universe.Map[f.Prog.Names[arg]]
 			sp++
 
 		default:
