@@ -14,8 +14,8 @@ also known as https://github.com/google/starlark-go.
 
 Monty does not aim to be a fully backwards compatible dialect
 with its predecessors. It is still intuitive and
-quickly learned. The language definition and implementation
-documents for Starlark below are still largely accurate.
+quickly learned. The [language definition](spec.md)
+and [implementation documents for Starlark](doc/impl.md) below are still largely accurate.
 
 Major additions:
 
