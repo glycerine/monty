@@ -46,7 +46,7 @@ func init() {
 		"dict":      NewBuiltin("dict", dict),
 		"dir":       NewBuiltin("dir", dir),
 		"enumerate": NewBuiltin("enumerate", enumerate),
-		"float":     NewBuiltin("float", float), // requires resolve.AllowFloat
+		"float64":   NewBuiltin("float64", float), // requires resolve.AllowFloat
 		"getattr":   NewBuiltin("getattr", getattr),
 		"hasattr":   NewBuiltin("hasattr", hasattr),
 		"hash":      NewBuiltin("hash", hash),
@@ -465,13 +465,13 @@ func enumerate(thread *Thread, _ *Builtin, args Tuple, kwargs []Tuple) (Value, e
 
 func float(thread *Thread, _ *Builtin, args Tuple, kwargs []Tuple) (Value, error) {
 	if len(kwargs) > 0 {
-		return nil, fmt.Errorf("float does not accept keyword arguments")
+		return nil, fmt.Errorf("float64 does not accept keyword arguments")
 	}
 	if len(args) == 0 {
 		return Float(0.0), nil
 	}
 	if len(args) != 1 {
-		return nil, fmt.Errorf("float got %d arguments, wants 1", len(args))
+		return nil, fmt.Errorf("float64 got %d arguments, wants 1", len(args))
 	}
 	switch x := args[0].(type) {
 	case Bool:
@@ -491,7 +491,7 @@ func float(thread *Thread, _ *Builtin, args Tuple, kwargs []Tuple) (Value, error
 		}
 		return Float(f), nil
 	default:
-		return nil, fmt.Errorf("float got %s, want number or string", x.Type())
+		return nil, fmt.Errorf("float64 got %s, want number or string", x.Type())
 	}
 }
 

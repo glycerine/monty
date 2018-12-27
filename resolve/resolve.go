@@ -385,7 +385,7 @@ func (r *resolver) useGlobal(id *syntax.Ident) binding {
 		scope = Predeclared // use of pre-declared
 	} else if r.isUniversal(id.Name) {
 		scope = Universal // use of universal name
-		if !AllowFloat && id.Name == "float" {
+		if !AllowFloat && id.Name == "float64" {
 			r.errorf(id.NamePos, doesnt+"support floating point")
 		}
 		if !AllowSet && id.Name == "set" {

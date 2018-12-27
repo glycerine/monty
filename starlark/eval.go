@@ -731,7 +731,7 @@ func Binary(op syntax.Token, x, y Value) (Value, error) {
 				return x.Mod(y), nil
 			case Float:
 				if y == 0 {
-					return nil, fmt.Errorf("float modulo by zero")
+					return nil, fmt.Errorf("float64 modulo by zero")
 				}
 				return x.Float().Mod(y), nil
 			}
@@ -739,12 +739,12 @@ func Binary(op syntax.Token, x, y Value) (Value, error) {
 			switch y := y.(type) {
 			case Float:
 				if y == 0.0 {
-					return nil, fmt.Errorf("float modulo by zero")
+					return nil, fmt.Errorf("float64 modulo by zero")
 				}
 				return Float(math.Mod(float64(x), float64(y))), nil
 			case Int:
 				if y.Sign() == 0 {
-					return nil, fmt.Errorf("float modulo by zero")
+					return nil, fmt.Errorf("float64 modulo by zero")
 				}
 				return x.Mod(y.Float()), nil
 			}

@@ -1,4 +1,4 @@
-# Tests of Starlark 'float'
+# Tests of Starlark 'float64'
 # option:float option:set
 
 load("assert.star", "assert")
@@ -90,16 +90,16 @@ assert.eq(-98.0 % -8.0, -2.0)
 assert.eq(2.5 % 2.0, 0.5)
 assert.eq(2.5 % 2, 0.5)
 assert.eq(5 % 4.0, 1.0)
-assert.fails(lambda: 1.0 % 0, "float modulo by zero")
-assert.fails(lambda: 1.0 % 0.0, "float modulo by zero")
-assert.fails(lambda: 1 % 0.0, "float modulo by zero")
+assert.fails(lambda: 1.0 % 0, "float64 modulo by zero")
+assert.fails(lambda: 1.0 % 0.0, "float64 modulo by zero")
+assert.fails(lambda: 1 % 0.0, "float64 modulo by zero")
 
 # floats cannot be used as indices, even if integral
 assert.fails(lambda: "abc"[1.0], "want int")
 assert.fails(lambda: ["A", "B", "C"].insert(1.0, "D"), "want int")
 
 # nan
-nan = float("NaN")
+nan = float64("NaN")
 def isnan(x): return x != x
 assert.true(nan != nan)
 assert.true(not (nan == nan))
@@ -131,8 +131,8 @@ assert.true(nan not in nandict)
 assert.eq(nandict.get(nan, None), None)
 
 # inf
-inf = float("Inf")
-neginf = float("-Inf")
+inf = float64("Inf")
+neginf = float64("-Inf")
 assert.true(isnan(+inf / +inf))
 assert.true(isnan(+inf / -inf))
 assert.true(isnan(-inf / +inf))
@@ -140,8 +140,8 @@ assert.eq(0.0 / +inf, 0.0)
 assert.eq(0.0 / -inf, 0.0)
 assert.true(inf > -inf)
 assert.eq(inf, -neginf)
-assert.eq(float(int("2" + "0" * 308)), inf) # 2e308 is too large to represent as a float
-assert.eq(float(int("-2" + "0" * 308)), -inf)
+assert.eq(float64(int("2" + "0" * 308)), inf) # 2e308 is too large to represent as a float
+assert.eq(float64(int("-2" + "0" * 308)), -inf)
 # TODO(adonovan): assert inf > any finite number, etc.
 
 # negative zero
@@ -179,24 +179,24 @@ assert.fails(lambda: int(inf), "cannot convert.*infinity")
 assert.fails(lambda: int(nan), "cannot convert.*NaN")
 
 # float conversion
-assert.eq(float(), 0.0)
-assert.eq(float(False), 0.0)
-assert.eq(float(True), 1.0)
-assert.eq(float(0), 0.0)
-assert.eq(float(1), 1.0)
-assert.eq(float(1.1), 1.1)
-assert.eq(float("1.1"), 1.1)
-assert.fails(lambda: float("1.1abc"), "invalid syntax")
-assert.fails(lambda: float("1e100.0"), "invalid syntax")
-assert.fails(lambda: float("1e1000"), "out of range")
-assert.fails(lambda: float(None), "want number or string")
-assert.eq(float("-1.1"), -1.1)
-assert.eq(float("+1.1"), +1.1)
-assert.eq(float("+Inf"), inf)
-assert.eq(float("-Inf"), neginf)
-assert.true(isnan(float("NaN")))
-assert.fails(lambda: float("+NaN"), "invalid syntax")
-assert.fails(lambda: float("-NaN"), "invalid syntax")
+assert.eq(float64(), 0.0)
+assert.eq(float64(False), 0.0)
+assert.eq(float64(True), 1.0)
+assert.eq(float64(0), 0.0)
+assert.eq(float64(1), 1.0)
+assert.eq(float64(1.1), 1.1)
+assert.eq(float64("1.1"), 1.1)
+assert.fails(lambda: float64("1.1abc"), "invalid syntax")
+assert.fails(lambda: float64("1e100.0"), "invalid syntax")
+assert.fails(lambda: float64("1e1000"), "out of range")
+assert.fails(lambda: float64(None), "want number or string")
+assert.eq(float64("-1.1"), -1.1)
+assert.eq(float64("+1.1"), +1.1)
+assert.eq(float64("+Inf"), inf)
+assert.eq(float64("-Inf"), neginf)
+assert.true(isnan(float64("NaN")))
+assert.fails(lambda: float64("+NaN"), "invalid syntax")
+assert.fails(lambda: float64("-NaN"), "invalid syntax")
 
 # hash
 # Check that equal float and int values have the same hash.
@@ -204,7 +204,7 @@ def checkhash():
   for a in [1.23e100, 1.23e10, 1.23e1, 1.23,
             1, 4294967295, 8589934591, 9223372036854775807]:
     for b in [a, -a, 1/a, -1/a]:
-      f = float(b)
+      f = float64(b)
       i = int(b)
       if f == i:
         fh = hash(f)
