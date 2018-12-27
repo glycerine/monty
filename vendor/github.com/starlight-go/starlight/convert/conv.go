@@ -3,6 +3,7 @@ package convert
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 
 	"github.com/glycerine/monty/resolve"
@@ -104,7 +105,8 @@ func FromValue(v starlark.Value) interface{} {
 			return i
 		}
 		// buh... maybe > maxint64?  Dunno
-		panic(fmt.Errorf("can't convert starlark.Int %q to int", v))
+		//panic(fmt.Errorf("can't convert starlark.Int %q to int", v))
+		return math.NaN()
 	case starlark.Float:
 		return float64(v)
 	case starlark.String:
