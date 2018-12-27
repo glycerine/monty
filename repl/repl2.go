@@ -151,6 +151,11 @@ func (env *MontyEnv) Init() {
 		dict = starlark.NewStringDict(0)
 	}
 
+	// freeze them all, to avoid user overwriting them.
+	for _, pkg := range dict.Map {
+		pkg.Freeze()
+	}
+
 	// add the struct constructor.
 	dict.Map["struct"] = starlark.NewBuiltin("struct", starlarkstruct.Make)
 
