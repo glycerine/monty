@@ -12,8 +12,12 @@ Monty is a fork of the starlark-go project.
 That code is available at https://go.starlark.net ,
 also known as https://github.com/google/starlark-go.
 
-Monty does not aim to be fully backwards compatible dialect.
-It is still intuitive and quickly learned. Major additions:
+Monty does not aim to be a fully backwards compatible dialect
+with its predecessors. It is still intuitive and
+quickly learned. The language definition and implementation
+documents for Starlark below are still largely accurate.
+
+Major additions:
 
 ~~~
 [x] A package type.
