@@ -71,6 +71,8 @@ func toValue(val reflect.Value) (starlark.Value, error) {
 		return starlark.MakeUint64(val.Uint()), nil
 	case reflect.Float32, reflect.Float64:
 		return starlark.Float(val.Float()), nil
+	case reflect.Complex64, reflect.Complex128:
+		return starlark.Complex128(val.Complex()), nil
 	case reflect.Func:
 		return makeStarFn("fn", val), nil
 	case reflect.Map:

@@ -339,6 +339,29 @@ func (x Bool) CompareSameType(op syntax.Token, y_ Value, depth int) (bool, error
 	return threeway(op, b2i(bool(x))-b2i(bool(y))), nil
 }
 
+// Complex128 is the type of a Starlark complex number
+type Complex128 complex128
+
+func (f Complex128) String() string {
+	return strconv.FormatFloat(real(f), 'g', 6, 64) +
+		"+" +
+		strconv.FormatFloat(imag(f), 'g', 6, 64) + "i"
+}
+
+func (f Complex128) Type() string { return "complex128" }
+func (f Complex128) Freeze()      {} // immutable
+func (f Complex128) Truth() Bool  { return f != 0.0 }
+func (f Complex128) Hash() (uint32, error) {
+	if isFinite(real(f)) && isFinite(imag(f)) {
+		i := finiteFloatToInt(Float(real(f))).bigint
+		j := finiteFloatToInt(Float(imag(f))).bigint
+		sum := big.NewInt(0)
+		sum.Add(i, j)
+		return Int{bigint: sum}.Hash()
+	}
+	return 1618033, nil // NaN, +/-Inf
+}
+
 // Float is the type of a Starlark float.
 type Float float64
 
