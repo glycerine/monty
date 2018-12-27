@@ -325,9 +325,9 @@ const (
 
 func (b Bool) String() string {
 	if b {
-		return "True"
+		return "true"
 	} else {
-		return "False"
+		return "false"
 	}
 }
 func (b Bool) Type() string          { return "bool" }

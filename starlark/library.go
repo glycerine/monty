@@ -38,7 +38,9 @@ func init() {
 	Universe = &StringDict{Map: map[string]Value{
 		"None":      None,
 		"True":      True,
+		"true":      True,
 		"False":     False,
+		"false":     False,
 		"any":       NewBuiltin("any", any),
 		"all":       NewBuiltin("all", all),
 		"bool":      NewBuiltin("bool", bool_),
