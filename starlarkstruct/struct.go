@@ -139,16 +139,16 @@ func (s *Struct) String() string {
 	} else {
 		buf.WriteString(s.constructor.String())
 	}
-	buf.WriteByte('(')
+	buf.WriteByte('{')
 	for i, e := range s.entries {
 		if i > 0 {
 			buf.WriteString(", ")
 		}
 		buf.WriteString(e.name)
-		buf.WriteString(" = ")
+		buf.WriteString(": ")
 		buf.WriteString(e.value.String())
 	}
-	buf.WriteByte(')')
+	buf.WriteByte('}')
 	return buf.String()
 }
 
