@@ -107,7 +107,7 @@ languages and compilers.
 
 * About the Go implementation: [doc/impl.md](doc/impl.md)
 
-* API documentation: [godoc.org/go.starlark.net/starlark](https://godoc.org/go.starlark.net/starlark)
+* API documentation: [godoc.org/github.com/glycerine/monty/starlark](https://godoc.org/github.com/glycerine/monty/starlark)
 
 * Mailing list: [starlark-go](https://groups.google.com/forum/#!forum/starlark-go)
 
