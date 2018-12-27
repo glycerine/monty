@@ -56,6 +56,9 @@ drwxr-xr-x    3 mysel  staff    96 Dec 25 15:34 vendor
 drwxr-xr-x    3 mysel  staff    96 Dec 25 17:12 verb
 
 1114
+>>> html  # display contents of standard library html package
+package html{EscapeString: <built-in function fn>, UnescapeString: <built-in function fn>}
+>>>
 >>> # ctrl-D to exit
 $
 ~~~
