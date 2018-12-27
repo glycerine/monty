@@ -23,9 +23,10 @@ Major additions:
 ~~~
 [x] A package type.
 [x] Most Go standard library packages are included.
-[x] The `cmd/mk_shadow_lib` utility to bind additional Go packages (requires re-build).
-[x] increment with ++
-[x] decrement with --
+[x] The `cmd/mk_shadow_lib` utility to bind additional Go libraries (requires re-build).
+[x] increment with `++`
+[x] decrement with `--`
+[x] assignment with `:=` is the same as `=`.
 [x] Preliminary complex128 number support. The `cmplx` package is available.
 [x] string(raw) will coerce raw []byte to a string; useful in
       `fmt.Printf("%s\n", string(exec.Command("ls", "-al").CombinedOutput())[0])`, for example.
@@ -66,6 +67,8 @@ $
 
 Monty uses reflection code from Nate Finch's https://github.com/starlight-go/starlight
 project, which is licensed under the MIT license.
+
+All optional features from Starlark-Go are enabled.
 
 This talk by Alan Donovan, https://www.youtube.com/watch?v=9P_YKVhncWI, is a good
 introduction to the original motivation for Starlark as a configuration
