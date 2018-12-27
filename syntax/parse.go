@@ -11,7 +11,13 @@ package syntax
 // package.  Verify that error positions are correct using the
 // chunkedfile mechanism.
 
-import "log"
+import (
+	"log"
+
+	"github.com/glycerine/monty/verb"
+)
+
+var vv = verb.VV
 
 // Enable this flag to print the token stream and log.Fatal on the first error.
 const debug = false
@@ -491,8 +497,27 @@ func (p *parser) parseExprs(exprs []Expr, allowTrailingComma bool) []Expr {
 	return exprs
 }
 
+// parseStructLiteral consumes struct literals of the
+// form: $structName{key0:val0 key1:val1 ... }
+func (p *parser) parseStructLiteral() Expr {
+	vv("parseStructLiteral")
+	p.consume(DOLLAR)
+	id := p.parseIdent()
+	d := p.parseDict()
+	dictX, isDictExpr := d.(*DictExpr)
+	if !isDictExpr {
+		p.in.errorf(p.in.pos, "got %#v, want Dictionary {}", d)
+	}
+	dictX.Name = id.Name
+	return d
+}
+
 // parseTest parses a 'test', a single-component expression.
 func (p *parser) parseTest() Expr {
+	if p.tok == DOLLAR {
+		return p.parseStructLiteral()
+	}
+
 	if p.tok == LAMBDA {
 		return p.parseLambda(true)
 	}

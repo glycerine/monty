@@ -81,6 +81,7 @@ const (
 	COLONEQUAL    // :=
 	PLUSPLUS      // ++, increment number
 	MINUSMINUS    // --, decrement number
+	DOLLAR        // $ looks like an S. use: "$mystruct{a:1 b:2}". The $ means a struct literal follows.
 
 	// Keywords
 	AND
@@ -169,6 +170,7 @@ var tokenNames = [...]string{
 	COLONEQUAL:    ":=",
 	PLUSPLUS:      "++",
 	MINUSMINUS:    "--",
+	DOLLAR:        "$",
 	AND:           "and",
 	BREAK:         "break",
 	CONTINUE:      "continue",
@@ -501,6 +503,12 @@ start:
 	for c == ' ' || c == '\t' {
 		sc.readRune()
 		c = sc.peekRune()
+	}
+
+	if c == '$' {
+		sc.readRune()
+		vv("saw DOLLAR")
+		return DOLLAR
 	}
 
 	// comment

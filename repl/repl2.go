@@ -72,11 +72,14 @@ type MontyEnv struct {
 
 	ScriptCache *starlight.Cache
 	Thread      *starlark.Thread
+
+	Stdlib map[string]bool
 }
 
 func NewMontyEnv() *MontyEnv {
 	e := &MontyEnv{
 		GoGlobal: make(map[string]interface{}),
+		Stdlib:   make(map[string]bool),
 	}
 	e.Init()
 	return e
@@ -135,6 +138,10 @@ func (env *MontyEnv) Init() {
 	env.GoGlobal["big"] = shadow_math_big.Pkg
 	env.GoGlobal["bits"] = shadow_math_bits.Pkg
 	env.GoGlobal["cmplx"] = shadow_math_cmplx.Pkg
+	// note the names of the above standard libraries
+	for k := range env.GoGlobal {
+		env.Stdlib[k] = true
+	}
 
 	env.GoGlobal["string"] = starlark.GenericAsString
 

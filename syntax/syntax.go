@@ -394,6 +394,7 @@ func (x *IfClause) Span() (start, end Position) {
 
 // A DictExpr represents a dictionary literal: { List }.
 type DictExpr struct {
+	Name string // a struct preceeded by the '$' sigil if not empty.
 	commentsRef
 	Lbrace Position
 	List   []Expr // all *DictEntrys
