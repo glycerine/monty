@@ -212,7 +212,7 @@ tuple = ()
 load("assert.star", "assert")
 
 float = 1.0
-assert.eq(type(float), "float")
+assert.eq(type(float), "float64")
 
 set = [1, 2, 3]
 assert.eq(type(set), "list")

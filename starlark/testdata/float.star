@@ -8,13 +8,13 @@ load("assert.star", "assert")
 # - limits
 
 # literals
-assert.eq(type(1.234), "float")
-assert.eq(type(1e10), "float")
-assert.eq(type(1e+10), "float")
-assert.eq(type(1e-10), "float")
-assert.eq(type(1.234e10), "float")
-assert.eq(type(1.234e+10), "float")
-assert.eq(type(1.234e-10), "float")
+assert.eq(type(1.234), "float64")
+assert.eq(type(1e10), "float64")
+assert.eq(type(1e+10), "float64")
+assert.eq(type(1e-10), "float64")
+assert.eq(type(1.234e10), "float64")
+assert.eq(type(1.234e+10), "float64")
+assert.eq(type(1.234e-10), "float64")
 
 # truth
 assert.true(123.0)
@@ -229,7 +229,7 @@ assert.fails(lambda: "%g" % "123", "requires float, not str")
 i0 = 1
 f0 = 1.0
 assert.eq(type(i0), "int")
-assert.eq(type(f0), "float")
+assert.eq(type(f0), "float64")
 
 ops = {
     '+': lambda x, y: x + y,
@@ -244,29 +244,29 @@ ops = {
 def checktypes():
   want = set("""
 int + int = int
-int + float = float
-float + int = float
-float + float = float
+int + float64 = float64
+float64 + int = float64
+float64 + float64 = float64
 int - int = int
-int - float = float
-float - int = float
-float - float = float
+int - float64 = float64
+float64 - int = float64
+float64 - float64 = float64
 int * int = int
-int * float = float
-float * int = float
-float * float = float
-int / int = float
-int / float = float
-float / int = float
-float / float = float
+int * float64 = float64
+float64 * int = float64
+float64 * float64 = float64
+int / int = float64
+int / float64 = float64
+float64 / int = float64
+float64 / float64 = float64
 int // int = int
-int // float = float
-float // int = float
-float // float = float
+int // float64 = float64
+float64 // int = float64
+float64 // float64 = float64
 int % int = int
-int % float = float
-float % int = float
-float % float = float
+int % float64 = float64
+float64 % int = float64
+float64 % float64 = float64
 """[1:].splitlines())
   for opname in ("+", "-", "*", "/", "%"):
     for x in [i0, f0]:

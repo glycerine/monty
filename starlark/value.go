@@ -366,7 +366,7 @@ func (f Complex128) Hash() (uint32, error) {
 type Float float64
 
 func (f Float) String() string { return strconv.FormatFloat(float64(f), 'g', 6, 64) }
-func (f Float) Type() string   { return "float" }
+func (f Float) Type() string   { return "float64" }
 func (f Float) Freeze()        {} // immutable
 func (f Float) Truth() Bool    { return f != 0.0 }
 func (f Float) Hash() (uint32, error) {
