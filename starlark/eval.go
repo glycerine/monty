@@ -75,7 +75,10 @@ func (thread *Thread) TopFrame() *Frame { return thread.frame }
 
 // A StringDict is a mapping from names to values, and represents
 // an environment such as the global variables of a module.
-// It is now also a true starlark.Value.
+// It is now also a true starlark.Value. StringDict is
+// currently used to represent packages at the REPL.
+// This may change in the future.
+//
 type StringDict struct {
 	Map         map[string]Value
 	Immut       map[string]bool
