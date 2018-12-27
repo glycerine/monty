@@ -11,9 +11,11 @@ import (
 // TestSerialization verifies that a serialized program can be loaded,
 // deserialized, and executed.
 func TestSerialization(t *testing.T) {
-	predeclared := starlark.StringDict{
+	predeclared := &starlark.StringDict{Map: map[string]starlark.Value{
 		"x": starlark.String("mur"),
 		"n": starlark.MakeInt(2),
+	},
+		Immut: map[string]bool{},
 	}
 	const src = `
 def mul(a, b):
@@ -41,13 +43,13 @@ y = mul(x, n)
 	if err != nil {
 		t.Fatalf("newProg.Init: %v", err)
 	}
-	if got, want := globals["y"], starlark.String("murmur"); got != want {
+	if got, want := globals.Map["y"], starlark.String("murmur"); got != want {
 		t.Errorf("Value of global was %s, want %s", got, want)
 		t.Logf("globals: %v", globals)
 	}
 
 	// Verify stack frame.
-	predeclared["n"] = starlark.None
+	predeclared.Map["n"] = starlark.None
 	_, err = newProg.Init(thread, predeclared)
 	evalErr, ok := err.(*starlark.EvalError)
 	if !ok {
