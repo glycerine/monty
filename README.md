@@ -1,8 +1,12 @@
 # Monty
 
-Monty is a subset of Python, supplemented with the Go standard
-library which is called by reflection. It is licensed under a
-3-clause BSD style license.
+Monty is a dialect of Python, supplemented with the Go standard
+library. Calls into compiled library functions leverage that highly
+tuned and well tested code. Monty provides a subset of Python.
+The Monty interpreter is pure Go, calls compiled Go by reflection,
+and runs without any CGO dependencies.
+
+It is licensed under a 3-clause BSD style license.
 
 Monty is a fork of the starlark-go project.
 That code is available at https://go.starlark.net ,
