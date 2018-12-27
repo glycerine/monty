@@ -152,8 +152,13 @@ func (env *MontyEnv) Init() {
 	}
 
 	// freeze them all, to avoid user overwriting them.
-	for _, pkg := range dict.Map {
+	for nm, pkg := range dict.Map {
 		pkg.Freeze()
+		// name the built in packages
+		sd, ok := pkg.(*starlark.StringDict)
+		if ok {
+			sd.PackageName = nm
+		}
 	}
 
 	// add the struct constructor.
