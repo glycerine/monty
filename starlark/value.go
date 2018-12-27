@@ -685,7 +685,8 @@ func (b *Builtin) BindReceiver(recv Value) *Builtin {
 
 // A *Dict represents a Starlark dictionary.
 type Dict struct {
-	ht hashtable
+	StructName string
+	ht         hashtable
 }
 
 func (d *Dict) Clear() error                                    { return d.ht.clear() }
@@ -697,10 +698,15 @@ func (d *Dict) Len() int                                        { return int(d.h
 func (d *Dict) Iterate() Iterator                               { return d.ht.iterate() }
 func (d *Dict) SetKey(k, v Value) error                         { return d.ht.insert(k, v) }
 func (d *Dict) String() string                                  { return toString(d) }
-func (d *Dict) Type() string                                    { return "dict" }
-func (d *Dict) Freeze()                                         { d.ht.freeze() }
-func (d *Dict) Truth() Bool                                     { return d.Len() > 0 }
-func (d *Dict) Hash() (uint32, error)                           { return 0, fmt.Errorf("unhashable type: dict") }
+func (d *Dict) Type() string {
+	if d.StructName != "" {
+		return "$" + d.StructName + " struct literal"
+	}
+	return "dict"
+}
+func (d *Dict) Freeze()               { d.ht.freeze() }
+func (d *Dict) Truth() Bool           { return d.Len() > 0 }
+func (d *Dict) Hash() (uint32, error) { return 0, fmt.Errorf("unhashable type: dict") }
 
 func (d *Dict) Attr(name string) (Value, error) {
 	v, found, err := d.ht.lookup(String(name))

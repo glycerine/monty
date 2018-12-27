@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/glycerine/monty/starlark"
-	"github.com/glycerine/monty/starlarkstruct"
 )
 
 const localKey = "Reporter"
@@ -63,7 +62,7 @@ func LoadAssertModule() (*starlark.StringDict, error) {
 			"error":   starlark.NewBuiltin("error", error_),
 			"catch":   starlark.NewBuiltin("catch", catch),
 			"matches": starlark.NewBuiltin("matches", matches),
-			"struct":  starlark.NewBuiltin("struct", starlarkstruct.Make),
+			"struct":  starlark.NewBuiltin("struct", starlark.StructMake),
 			"_freeze": starlark.NewBuiltin("freeze", freeze),
 		},
 			Immut: make(map[string]bool),

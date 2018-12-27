@@ -507,7 +507,7 @@ start:
 
 	if c == '$' {
 		sc.readRune()
-		vv("saw DOLLAR")
+		//vv("saw DOLLAR")
 		return DOLLAR
 	}
 

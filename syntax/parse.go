@@ -500,15 +500,16 @@ func (p *parser) parseExprs(exprs []Expr, allowTrailingComma bool) []Expr {
 // parseStructLiteral consumes struct literals of the
 // form: $structName{key0:val0 key1:val1 ... }
 func (p *parser) parseStructLiteral() Expr {
-	vv("parseStructLiteral")
+	//vv("parseStructLiteral")
 	p.consume(DOLLAR)
 	id := p.parseIdent()
-	d := p.parseDict()
+	d := p.parseDict(true)
 	dictX, isDictExpr := d.(*DictExpr)
 	if !isDictExpr {
 		p.in.errorf(p.in.pos, "got %#v, want Dictionary {}", d)
 	}
-	dictX.Name = id.Name
+	dictX.SlitIdent = id
+	//vv("parser got whole slit, id = '%#v'", id)
 	return d
 }
 
@@ -821,7 +822,7 @@ func (p *parser) parsePrimary() Expr {
 		return p.parseList()
 
 	case LBRACE:
-		return p.parseDict()
+		return p.parseDict(false)
 
 	case LPAREN:
 		lparen := p.nextToken()
@@ -884,7 +885,9 @@ func (p *parser) parseList() Expr {
 // dict = '{' '}'
 //      | '{' dict_entry_list '}'
 //      | '{' dict_entry FOR loop_variables IN expr '}'
-func (p *parser) parseDict() Expr {
+//
+// if keyStr, we only accept keys that are strings.
+func (p *parser) parseDict(keyStr bool) Expr {
 	lbrace := p.nextToken()
 	if p.tok == RBRACE {
 		// empty dict
@@ -892,7 +895,7 @@ func (p *parser) parseDict() Expr {
 		return &DictExpr{Lbrace: lbrace, Rbrace: rbrace}
 	}
 
-	x := p.parseDictEntry()
+	x := p.parseDictEntry(keyStr)
 
 	if p.tok == FOR {
 		// dict comprehension
@@ -905,7 +908,7 @@ func (p *parser) parseDict() Expr {
 		if p.tok == RBRACE {
 			break
 		}
-		entries = append(entries, p.parseDictEntry())
+		entries = append(entries, p.parseDictEntry(keyStr))
 	}
 
 	rbrace := p.consume(RBRACE)
@@ -913,8 +916,26 @@ func (p *parser) parseDict() Expr {
 }
 
 // dict_entry = test ':' test
-func (p *parser) parseDictEntry() *DictEntry {
+func (p *parser) parseDictEntry(keyStr bool) *DictEntry {
+	start := p.in.pos
 	k := p.parseTest()
+	if keyStr {
+		switch x := k.(type) {
+		case *Ident:
+			k = &Literal{
+				Token:    STRING,
+				TokenPos: x.NamePos,
+				Raw:      x.Name,
+				Value:    x.Name,
+			}
+		case *Literal:
+			if x.Token != STRING {
+				p.in.errorf(start, "got %T, these keys must be labels/strings", k)
+			}
+		default:
+			p.in.errorf(start, "got %T, these keys must be labels/strings", k)
+		}
+	}
 	colon := p.consume(COLON)
 	v := p.parseTest()
 	return &DictEntry{Key: k, Colon: colon, Value: v}

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+package starlark
+
 // Package starlarkstruct defines the Starlark 'struct' type,
-// an optional language extension.
-package starlarkstruct
+// and was merged with package starlark.
 
 // It is tempting to introduce a variant of Struct that is a wrapper
 // around a Go struct value, for stronger typing guarantees and more
@@ -27,7 +28,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/glycerine/monty/starlark"
 	"github.com/glycerine/monty/syntax"
 )
 
@@ -40,46 +40,51 @@ import (
 // 		"struct":  starlark.NewBuiltin("struct", starlarkstruct.Make),
 // 	}
 //
-func Make(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func StructMake(_ *Thread, _ *Builtin, args Tuple, kwargs []Tuple) (Value, error) {
 	if len(args) > 0 {
 		return nil, fmt.Errorf("struct: unexpected positional arguments")
 	}
-	return FromKeywords(Default, kwargs), nil
+	return StructFromKeywords(Default, kwargs), nil
 }
 
 // FromKeywords returns a new struct instance whose fields are specified by the
 // key/value pairs in kwargs.  (Each kwargs[i][0] must be a starlark.String.)
-func FromKeywords(constructor starlark.Value, kwargs []starlark.Tuple) *Struct {
-	if constructor == nil {
-		panic("nil constructor")
+func StructFromKeywords(ctor string, kwargs []Tuple) *Struct {
+	if ctor == "" {
+		ctor = Default
 	}
-	s := &Struct{
-		constructor: constructor,
-		entries:     make(entries, 0, len(kwargs)),
-	}
+	s := NewStruct(String(ctor))
 	for _, kwarg := range kwargs {
-		k := string(kwarg[0].(starlark.String))
+		k := string(kwarg[0].(String))
 		v := kwarg[1]
-		s.entries = append(s.entries, entry{k, v})
+		s.Fields = append(s.Fields, field{k, v})
+		s.Map[k] = len(s.Fields) - 1
 	}
-	sort.Sort(s.entries)
 	return s
+}
+
+func NewStruct(constructor Value) *Struct {
+	s, ok := constructor.(String)
+	if !ok {
+		panic(fmt.Sprintf("error: NewStruct must be called with String ctor, got %T", constructor))
+	}
+	return &Struct{
+		Ctor: string(s),
+		Map:  make(map[string]int),
+	}
 }
 
 // FromStringDict returns a whose elements are those of d.
 // The constructor parameter specifies the constructor; use Default for an ordinary struct.
-func FromStringDict(constructor starlark.Value, d *starlark.StringDict) *Struct {
+func FromStringDict(constructor Value, d *StringDict) *Struct {
 	if constructor == nil {
 		panic("nil constructor")
 	}
-	s := &Struct{
-		constructor: constructor,
-		entries:     make(entries, 0, len(d.Map)),
-	}
+	s := NewStruct(constructor)
 	for k, v := range d.Map {
-		s.entries = append(s.entries, entry{k, v})
+		s.Fields = append(s.Fields, field{k, v})
+		s.Map[k] = len(s.Fields) - 1
 	}
-	sort.Sort(s.entries)
 	return s
 }
 
@@ -99,48 +104,54 @@ func FromStringDict(constructor starlark.Value, d *starlark.StringDict) *Struct 
 //
 // Use Attr to access its fields and AttrNames to enumerate them.
 type Struct struct {
-	constructor starlark.Value
-	entries     entries // sorted by name
+	Ctor   string
+	Fields []field        // insertion order
+	Map    map[string]int // INVAR: fields[Map[field]] == field
 }
 
 // Default is the default constructor for structs.
 // It is merely the string "struct".
-const Default = starlark.String("struct")
+const Default = "struct"
 
-type entries []entry
+type fields []field
 
-func (a entries) Len() int           { return len(a) }
-func (a entries) Less(i, j int) bool { return a[i].name < a[j].name }
-func (a entries) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a fields) Len() int           { return len(a) }
+func (a fields) Less(i, j int) bool { return a[i].name < a[j].name }
+func (a fields) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
-type entry struct {
+type field struct {
 	name  string // not to_{proto,json}
-	value starlark.Value
+	value Value
 }
 
 var (
-	_ starlark.HasAttrs  = (*Struct)(nil)
-	_ starlark.HasBinary = (*Struct)(nil)
+	_ HasAttrs  = (*Struct)(nil)
+	_ HasBinary = (*Struct)(nil)
 )
 
-// ToStringDict adds a name/value entry to d for each field of the struct.
-func (s *Struct) ToStringDict(d starlark.StringDict) {
-	for _, e := range s.entries {
+// ToStringDict adds a name/value field to d for each field of the struct.
+func (s *Struct) ToStringDict(d StringDict) {
+	for _, e := range s.Fields {
 		d.Map[e.name] = e.value
 	}
 }
 
 func (s *Struct) String() string {
 	var buf bytes.Buffer
-	if s.constructor == Default {
+	if s.Ctor == Default {
 		// NB: The Java implementation always prints struct
 		// even for Bazel provider instances.
 		buf.WriteString("struct") // avoid String()'s quotation
 	} else {
-		buf.WriteString(s.constructor.String())
+		buf.WriteRune('$')
+		buf.WriteString(s.Ctor)
 	}
 	buf.WriteByte('{')
-	for i, e := range s.entries {
+
+	// write in sorted order
+	sorted := s.AttrNames()
+	for i, fld := range sorted {
+		e := s.Fields[s.Map[fld]]
 		if i > 0 {
 			buf.WriteString(", ")
 		}
@@ -153,15 +164,20 @@ func (s *Struct) String() string {
 }
 
 // Constructor returns the constructor used to create this struct.
-func (s *Struct) Constructor() starlark.Value { return s.constructor }
+func (s *Struct) Constructor() Value { return String(s.Ctor) }
 
-func (s *Struct) Type() string         { return "struct" }
-func (s *Struct) Truth() starlark.Bool { return true } // even when empty
+func (s *Struct) Type() string {
+	if s.Ctor != Default {
+		return "struct_literal<$" + s.Ctor + ">"
+	}
+	return "struct"
+}
+func (s *Struct) Truth() Bool { return true } // even when empty
 func (s *Struct) Hash() (uint32, error) {
 	// Same algorithm as Tuple.hash, but with different primes.
 	var x, m uint32 = 8731, 9839
-	for _, e := range s.entries {
-		namehash, _ := starlark.String(e.name).Hash()
+	for _, e := range s.Fields {
+		namehash, _ := String(e.name).Hash()
 		x = x ^ 3*namehash
 		y, err := e.value.Hash()
 		if err != nil {
@@ -173,95 +189,83 @@ func (s *Struct) Hash() (uint32, error) {
 	return x, nil
 }
 func (s *Struct) Freeze() {
-	for _, e := range s.entries {
+	for _, e := range s.Fields {
 		e.value.Freeze()
 	}
 }
 
-func (x *Struct) Binary(op syntax.Token, y starlark.Value, side starlark.Side) (starlark.Value, error) {
+func (x *Struct) Binary(op syntax.Token, y Value, side Side) (Value, error) {
 	if y, ok := y.(*Struct); ok && op == syntax.PLUS {
-		if side == starlark.Right {
+		if side == Right {
 			x, y = y, x
 		}
 
-		if eq, err := starlark.Equal(x.constructor, y.constructor); err != nil {
-			return nil, fmt.Errorf("in %s + %s: error comparing constructors: %v",
-				x.constructor, y.constructor, err)
-		} else if !eq {
+		if x.Ctor != y.Ctor {
 			return nil, fmt.Errorf("cannot add structs of different constructors: %s + %s",
-				x.constructor, y.constructor)
+				x.Ctor, y.Ctor)
 		}
 
-		z := starlark.NewStringDict(x.len() + y.len())
-		for _, e := range x.entries {
+		z := NewStringDict(x.len() + y.len())
+		for _, e := range x.Fields {
 			z.Map[e.name] = e.value
 		}
-		for _, e := range y.entries {
+		for _, e := range y.Fields {
 			z.Map[e.name] = e.value
 		}
 
-		return FromStringDict(x.constructor, z), nil
+		return FromStringDict(String(x.Ctor), z), nil
 	}
 	return nil, nil // unhandled
+}
+
+// update if already present, insert if not.
+func (s *Struct) Upsert(key Value, val Value) error {
+	k, ok := key.(String)
+	if !ok {
+		return fmt.Errorf("'%s' fields must be string labels; we got %T", s.Ctor, key)
+	}
+
+	ks := string(k)
+	where, already := s.Map[ks]
+	if already {
+		s.Fields[where] = field{ks, val}
+	} else {
+		s.Fields = append(s.Fields, field{ks, val})
+		s.Map[ks] = len(s.Fields) - 1
+	}
+	return nil
 }
 
 // SetField is required for
 // the HasSetField interface. This means we have fields
 // that may be written by a dot expression such as "x.f = y".
-func (s *Struct) SetField(name string, val starlark.Value) error {
-	// Binary search the entries. Borrowed from Attr()
-	n := len(s.entries)
-	i, j := 0, n
-	for i < j {
-		h := int(uint(i+j) >> 1)
-		if s.entries[h].name < name {
-			i = h + 1
-		} else {
-			j = h
-		}
-	}
-	if i < n && s.entries[i].name == name {
-		s.entries[i].value = val
+func (s *Struct) SetField(name string, val Value) error {
+
+	where, already := s.Map[name]
+	if already {
+		s.Fields[where] = field{name, val}
 		return nil
 	}
-	// not found
-
-	var ctor string
-	if s.constructor != Default {
-		ctor = s.constructor.String() + " "
-	}
-	return fmt.Errorf("%sstruct has no .%s attribute", ctor, name)
+	return fmt.Errorf("struct $%s has no .%s attribute", s.Ctor, name)
 }
 
 // Attr returns the value of the specified field,
 // or deprecated method if the name is "to_json" or "to_proto"
 // and the struct has no field of that name.
-func (s *Struct) Attr(name string) (starlark.Value, error) {
-	// Binary search the entries.
-	// This implementation is a specialization of
-	// sort.Search that avoids dynamic dispatch.
-	n := len(s.entries)
-	i, j := 0, n
-	for i < j {
-		h := int(uint(i+j) >> 1)
-		if s.entries[h].name < name {
-			i = h + 1
-		} else {
-			j = h
-		}
-	}
-	if i < n && s.entries[i].name == name {
-		return s.entries[i].value, nil
+func (s *Struct) Attr(name string) (Value, error) {
+	k, ok := s.Map[name]
+	if ok {
+		return s.Fields[k].value, nil
 	}
 
 	// TODO(adonovan): there may be a nice feature for core
-	// starlark.Value here, especially for JSON, but the current
+	// Value here, especially for JSON, but the current
 	// features are incomplete and underspecified.
 	//
 	// to_{json,proto} are deprecated, appropriately; see Google issue b/36412967.
 	switch name {
 	case "to_json", "to_proto":
-		return starlark.NewBuiltin(name, func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		return NewBuiltin(name, func(thread *Thread, fn *Builtin, args Tuple, kwargs []Tuple) (Value, error) {
 			var buf bytes.Buffer
 			var err error
 			if name == "to_json" {
@@ -274,19 +278,19 @@ func (s *Struct) Attr(name string) (starlark.Value, error) {
 				// to show the path through the object graph.
 				return nil, err
 			}
-			return starlark.String(buf.String()), nil
+			return String(buf.String()), nil
 		}), nil
 	}
 
 	var ctor string
-	if s.constructor != Default {
-		ctor = s.constructor.String() + " "
+	if s.Ctor != Default {
+		ctor = s.Ctor + " "
 	}
 	return nil, fmt.Errorf("%sstruct has no .%s attribute", ctor, name)
 }
 
 func writeProtoStruct(out *bytes.Buffer, depth int, s *Struct) error {
-	for _, e := range s.entries {
+	for _, e := range s.Fields {
 		if err := writeProtoField(out, depth, e.name, e.value); err != nil {
 			return err
 		}
@@ -294,7 +298,7 @@ func writeProtoStruct(out *bytes.Buffer, depth int, s *Struct) error {
 	return nil
 }
 
-func writeProtoField(out *bytes.Buffer, depth int, field string, v starlark.Value) error {
+func writeProtoField(out *bytes.Buffer, depth int, field string, v Value) error {
 	if depth > 16 {
 		return fmt.Errorf("to_proto: depth limit exceeded")
 	}
@@ -308,10 +312,10 @@ func writeProtoField(out *bytes.Buffer, depth int, field string, v starlark.Valu
 		fmt.Fprintf(out, "%*s}\n", 2*depth, "")
 		return nil
 
-	case *starlark.List, starlark.Tuple:
-		iter := starlark.Iterate(v)
+	case *List, Tuple:
+		iter := Iterate(v)
 		defer iter.Done()
-		var elem starlark.Value
+		var elem Value
 		for iter.Next(&elem) {
 			if err := writeProtoField(out, depth, field, elem); err != nil {
 				return err
@@ -323,17 +327,17 @@ func writeProtoField(out *bytes.Buffer, depth int, field string, v starlark.Valu
 	// scalars
 	fmt.Fprintf(out, "%*s%s: ", 2*depth, "", field)
 	switch v := v.(type) {
-	case starlark.Bool:
+	case Bool:
 		fmt.Fprintf(out, "%t", v)
 
-	case starlark.Int:
+	case Int:
 		// TODO(adonovan): limits?
 		out.WriteString(v.String())
 
-	case starlark.Float:
+	case Float:
 		fmt.Fprintf(out, "%g", v)
 
-	case starlark.String:
+	case String:
 		fmt.Fprintf(out, "%q", string(v))
 
 	default:
@@ -344,21 +348,21 @@ func writeProtoField(out *bytes.Buffer, depth int, field string, v starlark.Valu
 }
 
 // writeJSON writes the JSON representation of a Starlark value to out.
-// TODO(adonovan): there may be a nice feature for core starlark.Value here,
+// TODO(adonovan): there may be a nice feature for core Value here,
 // but the current feature is incomplete and underspecified.
-func writeJSON(out *bytes.Buffer, v starlark.Value) error {
+func writeJSON(out *bytes.Buffer, v Value) error {
 	switch v := v.(type) {
-	case starlark.NoneType:
+	case NoneType:
 		out.WriteString("null")
-	case starlark.Bool:
+	case Bool:
 		fmt.Fprintf(out, "%t", v)
-	case starlark.Int:
+	case Int:
 		// TODO(adonovan): test large numbers.
 		out.WriteString(v.String())
-	case starlark.Float:
+	case Float:
 		// TODO(adonovan): test.
 		fmt.Fprintf(out, "%g", v)
-	case starlark.String:
+	case String:
 		s := string(v)
 		if goQuoteIsSafe(s) {
 			fmt.Fprintf(out, "%q", s)
@@ -367,9 +371,9 @@ func writeJSON(out *bytes.Buffer, v starlark.Value) error {
 			data, _ := json.Marshal(s)
 			out.Write(data)
 		}
-	case starlark.Indexable: // Tuple, List
+	case Indexable: // Tuple, List
 		out.WriteByte('[')
-		for i, n := 0, starlark.Len(v); i < n; i++ {
+		for i, n := 0, Len(v); i < n; i++ {
 			if i > 0 {
 				out.WriteString(", ")
 			}
@@ -380,11 +384,11 @@ func writeJSON(out *bytes.Buffer, v starlark.Value) error {
 		out.WriteByte(']')
 	case *Struct:
 		out.WriteByte('{')
-		for i, e := range v.entries {
+		for i, e := range v.Fields {
 			if i > 0 {
 				out.WriteString(", ")
 			}
-			if err := writeJSON(out, starlark.String(e.name)); err != nil {
+			if err := writeJSON(out, String(e.name)); err != nil {
 				return err
 			}
 			out.WriteString(": ")
@@ -410,7 +414,7 @@ func goQuoteIsSafe(s string) bool {
 	return true
 }
 
-func (s *Struct) len() int { return len(s.entries) }
+func (s *Struct) len() int { return len(s.Fields) }
 
 // AttrNames returns a new sorted list of the struct fields.
 //
@@ -421,14 +425,15 @@ func (s *Struct) len() int { return len(s.entries) }
 // called if the struct does not have fields of these names. Ideally
 // these will go away soon. See Google issue b/36412967.
 func (s *Struct) AttrNames() []string {
-	names := make([]string, len(s.entries))
-	for i, e := range s.entries {
+	names := make([]string, len(s.Fields))
+	for i, e := range s.Fields {
 		names[i] = e.name
 	}
+	sort.Strings(names)
 	return names
 }
 
-func (x *Struct) CompareSameType(op syntax.Token, y_ starlark.Value, depth int) (bool, error) {
+func (x *Struct) CompareSameType(op syntax.Token, y_ Value, depth int) (bool, error) {
 	y := y_.(*Struct)
 	switch op {
 	case syntax.EQL:
@@ -446,17 +451,14 @@ func structsEqual(x, y *Struct, depth int) (bool, error) {
 		return false, nil
 	}
 
-	if eq, err := starlark.Equal(x.constructor, y.constructor); err != nil {
-		return false, fmt.Errorf("error comparing struct constructors %v and %v: %v",
-			x.constructor, y.constructor, err)
-	} else if !eq {
+	if x.Ctor != y.Ctor {
 		return false, nil
 	}
 
 	for i, n := 0, x.len(); i < n; i++ {
-		if x.entries[i].name != y.entries[i].name {
+		if x.Fields[i].name != y.Fields[i].name {
 			return false, nil
-		} else if eq, err := starlark.EqualDepth(x.entries[i].value, y.entries[i].value, depth-1); err != nil {
+		} else if eq, err := EqualDepth(x.Fields[i].value, y.Fields[i].value, depth-1); err != nil {
 			return false, err
 		} else if !eq {
 			return false, nil

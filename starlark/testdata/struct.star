@@ -11,7 +11,7 @@ assert.eq(s, s)
 assert.eq(s, struct(host='localhost', port=80))
 assert.ne(s, struct(host='localhost', port=81))
 assert.eq(type(s), 'struct')
-assert.eq(str(s),  'struct(host = "localhost", port = 80)')
+assert.eq(str(s),  'struct{host: "localhost", port: 80}')
 assert.eq(s.host, 'localhost')
 assert.eq(s.port, 80)
 assert.fails(lambda: s.protocol, 'struct has no .protocol attribute')
@@ -25,7 +25,7 @@ assert.eq(str(hostport), 'hostport')
 # Call the symbol to instantiate a new type.
 http = hostport(host='localhost', port=80)
 assert.eq(type(http), 'struct')
-assert.eq(str(http), 'hostport(host = "localhost", port = 80)') # includes name of constructor
+assert.eq(str(http), 'hostport{host: "localhost", port: 80}') # includes name of constructor
 assert.eq(http, http)
 assert.eq(http, hostport(host='localhost', port=80))
 assert.ne(http, hostport(host='localhost', port=443))

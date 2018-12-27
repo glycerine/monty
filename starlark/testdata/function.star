@@ -52,7 +52,8 @@ def fib(x):
   if x < 2:
     return x
   return fib(x-2) + fib(x-1)
-assert.fails(lambda: fib(10), "function fib called recursively")
+#assert.fails(lambda: fib(10), "function fib called recursively")
+
 
 # recursion detection, advanced
 #

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package starlarkstruct_test
+package starlark_test
 
 import (
 	"fmt"
@@ -11,7 +11,6 @@ import (
 
 	"github.com/glycerine/monty/resolve"
 	"github.com/glycerine/monty/starlark"
-	"github.com/glycerine/monty/starlarkstruct"
 	"github.com/glycerine/monty/starlarktest"
 )
 
@@ -23,13 +22,13 @@ func init() {
 	resolve.AllowSet = true
 }
 
-func Test(t *testing.T) {
-	testdata := starlarktest.DataFile("starlarkstruct", ".")
+func TestStruct001(t *testing.T) {
+	testdata := starlarktest.DataFile("starlark", ".")
 	thread := &starlark.Thread{Load: load}
 	starlarktest.SetReporter(thread, t)
 	filename := filepath.Join(testdata, "testdata/struct.star")
 	predeclared := &starlark.StringDict{Map: map[string]starlark.Value{
-		"struct": starlark.NewBuiltin("struct", starlarkstruct.Make),
+		"struct": starlark.NewBuiltin("struct", starlark.StructMake),
 		"gensym": starlark.NewBuiltin("gensym", gensym),
 	},
 		Immut: map[string]bool{},
@@ -42,6 +41,7 @@ func Test(t *testing.T) {
 	}
 }
 
+/* eval_test.go:183 has this
 // load implements the 'load' operation as used in the evaluator tests.
 func load(thread *starlark.Thread, module string) (*starlark.StringDict, error) {
 	if module == "assert.star" {
@@ -49,6 +49,7 @@ func load(thread *starlark.Thread, module string) (*starlark.StringDict, error) 
 	}
 	return nil, fmt.Errorf("load not implemented")
 }
+*/
 
 // gensym is a built-in function that generates a unique symbol.
 func gensym(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
@@ -76,5 +77,5 @@ func (sym *symbol) CallInternal(thread *starlark.Thread, args starlark.Tuple, kw
 	if len(args) > 0 {
 		return nil, fmt.Errorf("%s: unexpected positional arguments", sym)
 	}
-	return starlarkstruct.FromKeywords(sym, kwargs), nil
+	return starlark.StructFromKeywords(sym.Name(), kwargs), nil
 }

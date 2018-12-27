@@ -89,18 +89,20 @@ const (
 	TRUE  // - TRUE True
 	FALSE // - FALSE False
 
-	ITERPUSH    //       iterable ITERPUSH -     [pushes the iterator stack]
-	ITERPOP     //              - ITERPOP -      [pops the iterator stack]
-	NOT         //          value NOT bool
-	RETURN      //          value RETURN -
-	SETINDEX    //        a i new SETINDEX -
-	INDEX       //            a i INDEX elem
-	SETDICT     // dict key value SETDICT -
-	SETDICTUNIQ // dict key value SETDICTUNIQ -
-	APPEND      //      list elem APPEND -
-	SLICE       //   x lo hi step SLICE slice
-	INPLACE_ADD //            x y INPLACE_ADD z      where z is x+y or x.extend(y)
-	MAKEDICT    //              - MAKEDICT dict
+	ITERPUSH      //       iterable ITERPUSH -     [pushes the iterator stack]
+	ITERPOP       //              - ITERPOP -      [pops the iterator stack]
+	NOT           //          value NOT bool
+	RETURN        //          value RETURN -
+	SETINDEX      //        a i new SETINDEX -
+	INDEX         //            a i INDEX elem
+	SETDICT       // dict key value SETDICT -
+	SETDICTUNIQ   // dict key value SETDICTUNIQ -
+	APPEND        //      list elem APPEND -
+	SLICE         //   x lo hi step SLICE slice
+	INPLACE_ADD   //            x y INPLACE_ADD z      where z is x+y or x.extend(y)
+	MAKEDICT      //              - MAKEDICT dict
+	SETMAKESTRUCT //           name SETMAKESTRUCT struct
+	STRUCTKV      // struct fld val STRUCTKV -
 
 	// --- opcodes with an argument must go below this line ---
 
@@ -139,69 +141,71 @@ const (
 // TODO(adonovan): add dynamic checks for missing opcodes in the tables below.
 
 var opcodeNames = [...]string{
-	AMP:         "amp",
-	APPEND:      "append",
-	ATTR:        "attr",
-	CALL:        "call",
-	CALL_KW:     "call_kw ",
-	CALL_VAR:    "call_var",
-	CALL_VAR_KW: "call_var_kw",
-	CIRCUMFLEX:  "circumflex",
-	CJMP:        "cjmp",
-	CONSTANT:    "constant",
-	DUP2:        "dup2",
-	DUP:         "dup",
-	EQL:         "eql",
-	EXCH:        "exch",
-	FALSE:       "false",
-	FREE:        "free",
-	GE:          "ge",
-	GLOBAL:      "global",
-	GT:          "gt",
-	GTGT:        "gtgt",
-	IN:          "in",
-	INDEX:       "index",
-	INPLACE_ADD: "inplace_add",
-	ITERJMP:     "iterjmp",
-	ITERPOP:     "iterpop",
-	ITERPUSH:    "iterpush",
-	JMP:         "jmp",
-	LE:          "le",
-	LOAD:        "load",
-	LOCAL:       "local",
-	LT:          "lt",
-	LTLT:        "ltlt",
-	MAKEDICT:    "makedict",
-	MAKEFUNC:    "makefunc",
-	MAKELIST:    "makelist",
-	MAKETUPLE:   "maketuple",
-	MINUS:       "minus",
-	NEQ:         "neq",
-	NONE:        "none",
-	NOP:         "nop",
-	NOT:         "not",
-	PERCENT:     "percent",
-	PIPE:        "pipe",
-	PLUS:        "plus",
-	POP:         "pop",
-	PREDECLARED: "predeclared",
-	RETURN:      "return",
-	SETDICT:     "setdict",
-	SETDICTUNIQ: "setdictuniq",
-	SETFIELD:    "setfield",
-	SETGLOBAL:   "setglobal",
-	SETINDEX:    "setindex",
-	SETLOCAL:    "setlocal",
-	SLASH:       "slash",
-	SLASHSLASH:  "slashslash",
-	SLICE:       "slice",
-	STAR:        "star",
-	TILDE:       "tilde",
-	TRUE:        "true",
-	UMINUS:      "uminus",
-	UNIVERSAL:   "universal",
-	UNPACK:      "unpack",
-	UPLUS:       "uplus",
+	AMP:           "amp",
+	APPEND:        "append",
+	ATTR:          "attr",
+	CALL:          "call",
+	CALL_KW:       "call_kw ",
+	CALL_VAR:      "call_var",
+	CALL_VAR_KW:   "call_var_kw",
+	CIRCUMFLEX:    "circumflex",
+	CJMP:          "cjmp",
+	CONSTANT:      "constant",
+	DUP2:          "dup2",
+	DUP:           "dup",
+	EQL:           "eql",
+	EXCH:          "exch",
+	FALSE:         "false",
+	FREE:          "free",
+	GE:            "ge",
+	GLOBAL:        "global",
+	GT:            "gt",
+	GTGT:          "gtgt",
+	IN:            "in",
+	INDEX:         "index",
+	INPLACE_ADD:   "inplace_add",
+	ITERJMP:       "iterjmp",
+	ITERPOP:       "iterpop",
+	ITERPUSH:      "iterpush",
+	JMP:           "jmp",
+	LE:            "le",
+	LOAD:          "load",
+	LOCAL:         "local",
+	LT:            "lt",
+	LTLT:          "ltlt",
+	MAKEDICT:      "makedict",
+	SETMAKESTRUCT: "setmakestruct",
+	STRUCTKV:      "structkv",
+	MAKEFUNC:      "makefunc",
+	MAKELIST:      "makelist",
+	MAKETUPLE:     "maketuple",
+	MINUS:         "minus",
+	NEQ:           "neq",
+	NONE:          "none",
+	NOP:           "nop",
+	NOT:           "not",
+	PERCENT:       "percent",
+	PIPE:          "pipe",
+	PLUS:          "plus",
+	POP:           "pop",
+	PREDECLARED:   "predeclared",
+	RETURN:        "return",
+	SETDICT:       "setdict",
+	SETDICTUNIQ:   "setdictuniq",
+	SETFIELD:      "setfield",
+	SETGLOBAL:     "setglobal",
+	SETINDEX:      "setindex",
+	SETLOCAL:      "setlocal",
+	SLASH:         "slash",
+	SLASHSLASH:    "slashslash",
+	SLICE:         "slice",
+	STAR:          "star",
+	TILDE:         "tilde",
+	TRUE:          "true",
+	UMINUS:        "uminus",
+	UNIVERSAL:     "universal",
+	UNPACK:        "unpack",
+	UPLUS:         "uplus",
 }
 
 const variableStackEffect = 0x7f
@@ -209,65 +213,67 @@ const variableStackEffect = 0x7f
 // stackEffect records the effect on the size of the operand stack of
 // each kind of instruction. For some instructions this requires computation.
 var stackEffect = [...]int8{
-	AMP:         -1,
-	APPEND:      -2,
-	ATTR:        0,
-	CALL:        variableStackEffect,
-	CALL_KW:     variableStackEffect,
-	CALL_VAR:    variableStackEffect,
-	CALL_VAR_KW: variableStackEffect,
-	CIRCUMFLEX:  -1,
-	CJMP:        -1,
-	CONSTANT:    +1,
-	DUP2:        +2,
-	DUP:         +1,
-	EQL:         -1,
-	FALSE:       +1,
-	FREE:        +1,
-	GE:          -1,
-	GLOBAL:      +1,
-	GT:          -1,
-	GTGT:        -1,
-	IN:          -1,
-	INDEX:       -1,
-	INPLACE_ADD: -1,
-	ITERJMP:     variableStackEffect,
-	ITERPOP:     0,
-	ITERPUSH:    -1,
-	JMP:         0,
-	LE:          -1,
-	LOAD:        -1,
-	LOCAL:       +1,
-	LT:          -1,
-	LTLT:        -1,
-	MAKEDICT:    +1,
-	MAKEFUNC:    -1,
-	MAKELIST:    variableStackEffect,
-	MAKETUPLE:   variableStackEffect,
-	MINUS:       -1,
-	NEQ:         -1,
-	NONE:        +1,
-	NOP:         0,
-	NOT:         0,
-	PERCENT:     -1,
-	PIPE:        -1,
-	PLUS:        -1,
-	POP:         -1,
-	PREDECLARED: +1,
-	RETURN:      -1,
-	SETDICT:     -3,
-	SETDICTUNIQ: -3,
-	SETFIELD:    -2,
-	SETGLOBAL:   -1,
-	SETINDEX:    -3,
-	SETLOCAL:    -1,
-	SLASH:       -1,
-	SLASHSLASH:  -1,
-	SLICE:       -3,
-	STAR:        -1,
-	TRUE:        +1,
-	UNIVERSAL:   +1,
-	UNPACK:      variableStackEffect,
+	AMP:           -1,
+	APPEND:        -2,
+	ATTR:          0,
+	CALL:          variableStackEffect,
+	CALL_KW:       variableStackEffect,
+	CALL_VAR:      variableStackEffect,
+	CALL_VAR_KW:   variableStackEffect,
+	CIRCUMFLEX:    -1,
+	CJMP:          -1,
+	CONSTANT:      +1,
+	DUP2:          +2,
+	DUP:           +1,
+	EQL:           -1,
+	FALSE:         +1,
+	FREE:          +1,
+	GE:            -1,
+	GLOBAL:        +1,
+	GT:            -1,
+	GTGT:          -1,
+	IN:            -1,
+	INDEX:         -1,
+	INPLACE_ADD:   -1,
+	ITERJMP:       variableStackEffect,
+	ITERPOP:       0,
+	ITERPUSH:      -1,
+	JMP:           0,
+	LE:            -1,
+	LOAD:          -1,
+	LOCAL:         +1,
+	LT:            -1,
+	LTLT:          -1,
+	MAKEDICT:      +1,
+	SETMAKESTRUCT: 0,
+	STRUCTKV:      -3,
+	MAKEFUNC:      -1,
+	MAKELIST:      variableStackEffect,
+	MAKETUPLE:     variableStackEffect,
+	MINUS:         -1,
+	NEQ:           -1,
+	NONE:          +1,
+	NOP:           0,
+	NOT:           0,
+	PERCENT:       -1,
+	PIPE:          -1,
+	PLUS:          -1,
+	POP:           -1,
+	PREDECLARED:   +1,
+	RETURN:        -1,
+	SETDICT:       -3,
+	SETDICTUNIQ:   -3,
+	SETFIELD:      -2,
+	SETGLOBAL:     -1,
+	SETINDEX:      -3,
+	SETLOCAL:      -1,
+	SLASH:         -1,
+	SLASHSLASH:    -1,
+	SLICE:         -3,
+	STAR:          -1,
+	TRUE:          +1,
+	UNIVERSAL:     +1,
+	UNPACK:        variableStackEffect,
 }
 
 func (op Opcode) String() string {
@@ -920,7 +926,7 @@ func (fcomp *fcomp) lookup(id *syntax.Ident) {
 	case resolve.Universal:
 		fcomp.emit1(UNIVERSAL, fcomp.pcomp.nameIndex(id.Name))
 	default:
-		log.Fatalf("%s: compiler.lookup(%s): scope = %d", id.NamePos, id.Name, id.Scope)
+		panic(fmt.Sprintf("%s: compiler.lookup(%s): scope = %d", id.NamePos, id.Name, id.Scope))
 	}
 }
 
@@ -1243,16 +1249,33 @@ func (fcomp *fcomp) expr(e syntax.Expr) {
 		fcomp.tuple(e.List)
 
 	case *syntax.DictExpr:
-		fcomp.emit(MAKEDICT)
-		for _, entry := range e.List {
-			entry := entry.(*syntax.DictEntry)
-			fcomp.emit(DUP)
-			fcomp.expr(entry.Key)
-			fcomp.expr(entry.Value)
-			fcomp.setPos(entry.Colon)
-			fcomp.emit(SETDICTUNIQ)
-		}
+		if e.SlitIdent != nil {
+			// this dictionary is actually a struct literal
+			nm := e.SlitIdent.Name
+			a := &syntax.Literal{Raw: nm, Value: nm}
+			fcomp.expr(a)
+			fcomp.emit(SETMAKESTRUCT)
 
+			for _, entry := range e.List {
+				entry := entry.(*syntax.DictEntry)
+				fcomp.emit(DUP)
+				fcomp.expr(entry.Key)
+				fcomp.expr(entry.Value)
+				fcomp.setPos(entry.Colon)
+				fcomp.emit(STRUCTKV)
+			}
+
+		} else {
+			fcomp.emit(MAKEDICT)
+			for _, entry := range e.List {
+				entry := entry.(*syntax.DictEntry)
+				fcomp.emit(DUP)
+				fcomp.expr(entry.Key)
+				fcomp.expr(entry.Value)
+				fcomp.setPos(entry.Colon)
+				fcomp.emit(SETDICTUNIQ)
+			}
+		}
 	case *syntax.UnaryExpr:
 		fcomp.expr(e.X)
 		fcomp.setPos(e.OpPos)

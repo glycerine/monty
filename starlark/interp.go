@@ -9,7 +9,10 @@ import (
 	"github.com/glycerine/monty/internal/compile"
 	"github.com/glycerine/monty/resolve"
 	"github.com/glycerine/monty/syntax"
+	"github.com/glycerine/monty/verb"
 )
+
+var vv = verb.VV
 
 const vmdebug = false // TODO(adonovan): use a bitfield of specific kinds of error.
 
@@ -374,6 +377,20 @@ loop:
 		case compile.MAKEDICT:
 			stack[sp] = new(Dict)
 			sp++
+
+		case compile.SETMAKESTRUCT:
+			name := stack[sp-1]
+			stack[sp-1] = NewStruct(name)
+
+		case compile.STRUCTKV:
+			strct := stack[sp-3].(*Struct)
+			k := stack[sp-2]
+			v := stack[sp-1]
+			sp -= 3
+			if err2 := strct.Upsert(k, v); err2 != nil {
+				err = err2
+				break loop
+			}
 
 		case compile.SETDICT, compile.SETDICTUNIQ:
 			dict := stack[sp-3].(*Dict)
