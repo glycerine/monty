@@ -12,11 +12,26 @@ Monty is a fork of the starlark-go project.
 That code is available at https://go.starlark.net ,
 also known as https://github.com/google/starlark-go.
 
-Monty uses code from Nate Finch's https://github.com/starlight-go/starlight
+Monty does not aim to be fully backwards compatible dialect.
+It is still intuitive and quickly learned. Major additions:
+
+~~~
+[x] A package type.
+[x] Most Go standard library packages are included.
+[x] The `cmd/mk_shadow_lib` utility to bind additional Go packages (requires re-build).
+[x] increment with ++
+[x] decrement with --
+[x] Preliminary complex128 number support. The `cmplx` package is available.
+[x] string(raw) will coerce raw []byte to a string; useful in
+      `fmt.Printf("%s\n", string(exec.Command("ls", "-al").CombinedOutput())[0])`, for example.
+      Try the above at the monty prompt. It works.
+~~~
+
+Monty uses reflection code from Nate Finch's https://github.com/starlight-go/starlight
 project, which is licensed under the MIT license.
 
 This talk by Alan Donovan, https://www.youtube.com/watch?v=9P_YKVhncWI, is a good
-introduction to the original motivation for Starlark (nee Skylark) as a configuration
+introduction to the original motivation for Starlark as a configuration
 language for the Bazel build system.
 
 An adaptation of the README for Starlark-Go follows.
