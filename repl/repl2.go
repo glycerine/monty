@@ -154,6 +154,9 @@ func (env *MontyEnv) Init() {
 	// add the struct constructor.
 	dict.Map["struct"] = starlark.NewBuiltin("struct", starlarkstruct.Make)
 
+	// add the package constructor.
+	dict.Map["package"] = starlark.NewBuiltin("package", PackageMaker)
+
 	env.GlobalDict = dict
 	env.ScriptCache = scriptCache
 	env.InitDone = true
@@ -196,4 +199,32 @@ func panicOn(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func PackageMaker(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	d := starlark.NewStringDict(0)
+	if len(kwargs) == 0 && len(args) == 0 {
+		return d, nil
+	}
+	if len(args) > 0 {
+		// name is first arg
+		s, ok := args[0].(starlark.String)
+		if ok {
+			d.PackageName = string(s)
+		}
+	} else {
+		// search for "name"
+		if len(kwargs) > 0 {
+			for _, tup := range kwargs {
+				k, ok := tup[0].(starlark.String)
+				if ok && string(k) == "name" {
+					v, ok := tup[1].(starlark.String)
+					if ok {
+						d.PackageName = string(v)
+					}
+				}
+			}
+		}
+	}
+	return d, nil
 }

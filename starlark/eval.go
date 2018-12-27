@@ -77,13 +77,14 @@ func (thread *Thread) TopFrame() *Frame { return thread.frame }
 // an environment such as the global variables of a module.
 // It is now also a true starlark.Value.
 type StringDict struct {
-	Map   map[string]Value
-	Immut map[string]bool
+	Map         map[string]Value
+	Immut       map[string]bool
+	PackageName string
 }
 
 // String packs the keys and stingified values of d
 // in a human readable string.
-func (d StringDict) String() string {
+func (d *StringDict) String() string {
 	names := make([]string, 0, len(d.Map))
 	for name := range d.Map {
 		names = append(names, name)
@@ -102,11 +103,15 @@ func (d StringDict) String() string {
 		sep = ", "
 	}
 	buf.WriteByte('}')
-	return buf.String()
+	fin := buf.String()
+	if d.PackageName == "" {
+		return fin
+	}
+	return fmt.Sprintf("package %s%s", d.PackageName, fin)
 }
 
 // Freeze makes d immutable.
-func (d StringDict) Freeze() {
+func (d *StringDict) Freeze() {
 	for k, v := range d.Map {
 		d.Immut[k] = true
 		v.Freeze()
@@ -126,7 +131,7 @@ func (d StringDict) Truth() Bool {
 
 // Type returns "StringDict".
 func (d StringDict) Type() string {
-	return "StringDict"
+	return "package"
 }
 
 func (d *StringDict) SetField(name string, val Value) error {
