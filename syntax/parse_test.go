@@ -7,6 +7,7 @@ package syntax_test
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -409,5 +410,46 @@ File
 	want = strings.TrimSpace(want)
 	if got != want {
 		t.Errorf("got %s, want %s", got, want)
+	}
+}
+
+// satisfy ReadSlicer interface
+type fakeReadline struct {
+	next  int
+	lines [][]byte
+}
+
+func (f *fakeReadline) ReadSlice() ([]byte, error) {
+	if f.next >= len(f.lines) {
+		return nil, io.EOF
+	}
+	f.next++
+	return f.lines[f.next-1], nil
+}
+func (f *fakeReadline) SetPrompt(s string) {
+	// no-op
+}
+
+var _ syntax.ReadSlicer = &fakeReadline{}
+
+func TestParseMultilineStringsFromREPL(t *testing.T) {
+	src := &fakeReadline{lines: make([][]byte, 3)}
+	src.lines[0] = []byte(`""" zero
+`)
+	src.lines[1] = []byte(`one
+`)
+	src.lines[2] = []byte(`two """
+`)
+	expr, err := syntax.ParseExpr("<fakeREPL>", src, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lit, isLit := expr.(*syntax.Literal)
+	if !isLit {
+		t.Fatalf("observed '%T', expected *syntax.Literal", expr)
+	}
+	expected := " zero\none\ntwo "
+	if lit.Value.(string) != expected {
+		t.Fatalf("observed '%v', expected '%v'", lit.Value, expected)
 	}
 }

@@ -105,6 +105,14 @@ const (
 	maxToken
 )
 
+// ReadSlicer allows a REPL to handle multiline strings.
+type ReadSlicer interface {
+	// ReadSlice gets a new line of input.
+	ReadSlice() ([]byte, error)
+	// SetPrompt changes the user prompt to s.
+	SetPrompt(s string)
+}
+
 func (tok Token) String() string { return tokenNames[tok] }
 
 // GoString is like String but quotes punctuation tokens.
@@ -239,17 +247,18 @@ func (p Position) isBefore(q Position) bool {
 
 // An scanner represents a single input file being parsed.
 type scanner struct {
-	complete       []byte    // entire input
-	rest           []byte    // rest of input
-	token          []byte    // token being scanned
-	pos            Position  // current input position
-	depth          int       // nesting of [ ] { } ( )
-	indentstk      []int     // stack of indentation levels
-	dents          int       // number of saved INDENT (>0) or OUTDENT (<0) tokens to return
-	lineStart      bool      // after NEWLINE; convert spaces to indentation tokens
-	keepComments   bool      // accumulate comments in slice
-	lineComments   []Comment // list of full line comments (if keepComments)
-	suffixComments []Comment // list of suffix comments (if keepComments)
+	complete       []byte     // entire input
+	rest           []byte     // rest of input
+	token          []byte     // token being scanned
+	pos            Position   // current input position
+	depth          int        // nesting of [ ] { } ( )
+	indentstk      []int      // stack of indentation levels
+	dents          int        // number of saved INDENT (>0) or OUTDENT (<0) tokens to return
+	lineStart      bool       // after NEWLINE; convert spaces to indentation tokens
+	keepComments   bool       // accumulate comments in slice
+	lineComments   []Comment  // list of full line comments (if keepComments)
+	suffixComments []Comment  // list of suffix comments (if keepComments)
+	getLine        ReadSlicer // ask repl for another line. nil under file source.
 }
 
 func newScanner(filename string, src interface{}, keepComments bool) (*scanner, error) {
@@ -257,18 +266,24 @@ func newScanner(filename string, src interface{}, keepComments bool) (*scanner, 
 	if err != nil {
 		return nil, err
 	}
-	return &scanner{
+	sc := &scanner{
 		complete:     data,
 		rest:         data,
 		pos:          Position{file: &filename, Line: 1, Col: 1},
 		indentstk:    make([]int, 1, 10), // []int{0} + spare capacity
 		lineStart:    true,
 		keepComments: keepComments,
-	}, nil
+	}
+	if rs, isReadSlicer := src.(ReadSlicer); isReadSlicer {
+		sc.getLine = rs
+	}
+	return sc, nil
 }
 
 func readSource(filename string, src interface{}) ([]byte, error) {
 	switch src := src.(type) {
+	case ReadSlicer:
+		return src.ReadSlice()
 	case string:
 		return []byte(src), nil
 	case []byte:
@@ -797,8 +812,8 @@ func (sc *scanner) scanString(val *tokenValue, quote rune) Token {
 		c := ' '
 		sc.startToken(val)
 		for c != '`' {
-			if sc.eof() {
-				sc.error(val.pos, "unexpected EOF in string")
+			if triple && !sc.moreInput(&start) {
+				sc.error(val.pos, "unexpected EOF in backtick string")
 			}
 			c = sc.readRune()
 		}
@@ -810,7 +825,9 @@ func (sc *scanner) scanString(val *tokenValue, quote rune) Token {
 	quoteCount := 0
 	for {
 		if sc.eof() {
-			sc.error(val.pos, "unexpected EOF in string")
+			if triple && !sc.moreInput(&start) {
+				sc.error(val.pos, `unexpected EOF in """ string`)
+			}
 		}
 		c := sc.readRune()
 		if c == '\n' && !triple {
@@ -1059,4 +1076,29 @@ var keywordToken = map[string]Token{
 	"try":      ILLEGAL,
 	"with":     ILLEGAL,
 	"yield":    ILLEGAL,
+}
+
+// under repl, get more input and return true.
+// under a file read, always return false.
+func (sc *scanner) moreInput(ppos *Position) bool {
+	////fmt.Printf("moreInput called. sc.getLine = '%#v'\n", sc.getLine)
+	if sc.getLine == nil {
+		return false
+	}
+	sc.getLine.SetPrompt("... ")
+	defer func() {
+		sc.getLine.SetPrompt(">>> ")
+	}()
+	by, err := sc.getLine.ReadSlice()
+	if err != nil {
+		// err is one of (nil, io.EOF, readline.ErrInterrupt)
+		//fmt.Printf("got error back from getLine.ReadSlice(): '%#v'\n", err)
+		sc.error(*ppos, err.Error())
+	}
+	//	if len(by) == 0 {
+	//		return false
+	//	}
+	sc.rest = append(sc.rest, by...)
+	sc.token = append(sc.token, by...)
+	return true
 }

@@ -132,7 +132,6 @@ func (d StringDict) Truth() Bool {
 	return len(d.Map) > 0
 }
 
-// Type returns "StringDict".
 func (d StringDict) Type() string {
 	return "package"
 }
@@ -437,6 +436,17 @@ func Eval(thread *Thread, filename string, src interface{}, env *StringDict) (Va
 	if err != nil {
 		return nil, err
 	}
+	return Call(thread, f, nil, nil)
+}
+
+// EvalExpr is like Eval but expr is provided directly,
+// avoiding a second ParseExp() call.
+func EvalExpr(thread *Thread, filename string, expr syntax.Expr, env *StringDict) (Value, error) {
+	locals, err := resolve.Expr(expr, env.Has, Universe.Has)
+	if err != nil {
+		return nil, err
+	}
+	f := makeToplevelFunction(compile.Expr(expr, "<expr>", locals), env)
 	return Call(thread, f, nil, nil)
 }
 

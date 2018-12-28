@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 
 	"github.com/chzyer/readline"
 	"github.com/glycerine/monty/starlark"
@@ -53,9 +52,10 @@ func REPL(thread *starlark.Thread, globals *starlark.StringDict) {
 		PrintError(err)
 		return
 	}
+	prep := withPrepend(rl)
 	defer rl.Close()
 	for {
-		if err := rep(rl, thread, globals); err != nil {
+		if err := rep(prep, thread, globals); err != nil {
 			if err == readline.ErrInterrupt {
 				fmt.Println(err)
 				continue
@@ -70,7 +70,9 @@ func REPL(thread *starlark.Thread, globals *starlark.StringDict) {
 //
 // It returns an error (possibly readline.ErrInterrupt)
 // only if readline failed. Starlark errors are printed.
-func rep(rl *readline.Instance, thread *starlark.Thread, globals *starlark.StringDict) error {
+func rep(rl *prepender, thread *starlark.Thread, globals *starlark.StringDict) error {
+	//fmt.Printf("top of rep()\n")
+	rl.reset()
 	// Each item gets its own context,
 	// which is cancelled by a SIGINT.
 	//
@@ -89,18 +91,23 @@ func rep(rl *readline.Instance, thread *starlark.Thread, globals *starlark.Strin
 	thread.SetLocal("context", ctx)
 
 	rl.SetPrompt(">>> ")
-	line, err := rl.Readline()
+
+	line, err := rl.ReadSlice()
 	if err != nil {
 		return err // may be ErrInterrupt
 	}
 
-	if l := strings.TrimSpace(line); l == "" || l[0] == '#' {
+	if l := bytes.TrimSpace(line); len(l) == 0 || l[0] == '#' {
 		return nil // blank or comment
 	}
 
+	rl.prepend(line)
+
 	// If the line contains a well-formed expression, evaluate it.
-	if _, err := syntax.ParseExpr("<stdin>", line, 0); err == nil {
-		if v, err := starlark.Eval(thread, "<stdin>", line, globals); err != nil {
+	x, err := syntax.ParseExpr("<stdin>", rl, 0)
+	if err == nil {
+		//fmt.Printf("ParseExpr worked, got back expression x='%#v'\n", x)
+		if v, err := starlark.EvalExpr(thread, "<stdin>", x, globals); err != nil {
 			PrintError(err)
 		} else if v != starlark.None {
 			fmt.Println(v)
@@ -108,53 +115,39 @@ func rep(rl *readline.Instance, thread *starlark.Thread, globals *starlark.Strin
 		return nil
 	}
 
+	//fmt.Printf("ParseExpr for single expression didn't work. err='%v'\n", err)
+
+	rl.startRecord()
+	rl.prepend(line)
+
 	// If the input so far is a single load or assignment statement,
 	// execute it without waiting for a blank line.
-	if f, err := syntax.Parse("<stdin>", line, 0); err == nil && len(f.Stmts) == 1 {
+	if f, err := syntax.Parse("<stdin>", rl, 0); err == nil && f != nil && len(f.Stmts) == 1 {
+		//fmt.Printf("Parse gave single statement, no error\n")
 		switch f.Stmts[0].(type) {
 		case *syntax.AssignStmt, *syntax.LoadStmt:
 			// Execute it as a file.
-			if err := execFileNoFreeze(thread, line, globals); err != nil {
+			rl.restore()
+			oneStmt := rl.prefix
+			//fmt.Printf("executing single statement, after restoring rl, rl.prefix='%s'\n", string(oneStmt))
+			if err := execFileNoFreeze(thread, oneStmt, globals); err != nil {
 				PrintError(err)
 			}
 			return nil
 		}
+	} else {
+		//fmt.Printf("Parse() gave err='%#v'\n", err)
+		if f != nil {
+			//fmt.Printf("and len(f.Stmts)='%v'\n", len(f.Stmts))
+		}
 	}
 
-	// Otherwise assume it is the first of several
-	// comprising a file, followed by a blank line.
-	var buf bytes.Buffer
-	fmt.Fprintln(&buf, line)
-	for {
-		rl.SetPrompt("... ")
-		line, err := rl.Readline()
-		if err != nil {
-			return err // may be ErrInterrupt
-		}
-		if l := strings.TrimSpace(line); l == "" {
-			break // blank
-		}
-		fmt.Fprintln(&buf, line)
-	}
-	text := buf.Bytes()
-
-	// Try parsing it once more as an expression,
-	// such as a call spread over several lines:
-	//   f(
-	//     1,
-	//     2
-	//   )
-	if _, err := syntax.ParseExpr("<stdin>", text, 0); err == nil {
-		if v, err := starlark.Eval(thread, "<stdin>", text, globals); err != nil {
-			PrintError(err)
-		} else if v != starlark.None {
-			fmt.Println(v)
-		}
-		return nil
-	}
+	//fmt.Printf("executing as file\n")
+	rl.restore()
+	rl.stopRecording()
 
 	// Execute it as a file.
-	if err := execFileNoFreeze(thread, text, globals); err != nil {
+	if err := execFileNoFreeze(thread, rl, globals); err != nil {
 		PrintError(err)
 	}
 
@@ -224,4 +217,77 @@ func MakeLoad() func(thread *starlark.Thread, module string) (*starlark.StringDi
 		}
 		return e.globals, e.err
 	}
+}
+
+type prepender struct {
+	*readline.Instance
+	prefix    []byte
+	recording bool
+	record    []byte
+}
+
+func withPrepend(rl *readline.Instance) (p *prepender) {
+	return &prepender{
+		Instance: rl,
+	}
+}
+
+func (p *prepender) prepend(line []byte) {
+	p.prefix = line
+}
+
+func (p *prepender) clearPrefix() {
+	p.prefix = p.prefix[:0]
+}
+
+func (p *prepender) reset() {
+	p.record = p.record[:0]
+	p.prefix = p.prefix[:0]
+	p.recording = false
+}
+
+func (p *prepender) startRecord() {
+	p.recording = true
+	if p.record == nil {
+		p.record = make([]byte, 0, 64)
+	} else {
+		p.record = p.record[:0]
+	}
+}
+
+func (p *prepender) stopRecording() {
+	p.recording = false
+}
+
+func (p *prepender) restore() {
+	//fmt.Printf("top of restore, p.prefix='%s'\n", string(p.prefix))
+	p.prefix = p.record
+	p.record = p.record[:0]
+	p.recording = false
+	//fmt.Printf("bottom of restore, p.prefix='%s'\n", string(p.prefix))
+}
+
+func (p *prepender) ReadSlice() (by []byte, err error) {
+	//fmt.Printf("top of ReadSlice\n")
+	if len(p.prefix) != 0 {
+		//fmt.Printf("prepender is consuming prefix '%s'\n", string(p.prefix))
+		by = p.prefix
+		p.prefix = p.prefix[:0]
+
+	} else {
+		by, err = p.Instance.ReadSlice()
+		//fmt.Printf("prepender ReadSlice call to readline lib got: '%s', err='%v'\n", string(by), err)
+		if err == nil {
+			by = append(by, '\n') // restore the byte that readline trimmed off.
+		}
+	}
+	// INVAR: by is ready to go
+	if p.recording {
+		p.record = append(p.record, by...)
+		//fmt.Printf(" +++ end of prepender.ReadSlice(), record is now '%s'\n", string(p.record))
+	} else {
+		//fmt.Printf("  *** prepender not recording\n")
+	}
+	//fmt.Printf("end of prepender.ReadSlice(), returning '%s', err='%#v'\n", string(by), err)
+	return
 }
