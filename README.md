@@ -28,7 +28,7 @@ Major additions:
 [x] decrement with `--`
 [x] assignment with `:=` is the same as `=`.
 [x] Preliminary complex128 number support. The `cmplx` package is available.
-[x] The REPL can handle multiline strings such as docstrings. Link
+[x] The REPL can handle multiline strings such as docstrings. Link:
 ~~~
 https://github.com/google/starlark-go/issues/81
 ~~~

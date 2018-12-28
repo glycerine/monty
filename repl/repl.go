@@ -66,12 +66,13 @@ func REPL(thread *starlark.Thread, globals *starlark.StringDict) {
 	fmt.Println()
 }
 
+var newline = []byte{'\n'}
+
 // rep reads, evaluates, and prints one item.
 //
 // It returns an error (possibly readline.ErrInterrupt)
 // only if readline failed. Starlark errors are printed.
 func rep(rl *prepender, thread *starlark.Thread, globals *starlark.StringDict) error {
-	//fmt.Printf("top of rep()\n")
 	rl.reset()
 	// Each item gets its own context,
 	// which is cancelled by a SIGINT.
@@ -106,7 +107,6 @@ func rep(rl *prepender, thread *starlark.Thread, globals *starlark.StringDict) e
 	// If the line contains a well-formed expression, evaluate it.
 	x, err := syntax.ParseExpr("<stdin>", rl, 0)
 	if err == nil {
-		//fmt.Printf("ParseExpr worked, got back expression x='%#v'\n", x)
 		if v, err := starlark.EvalExpr(thread, "<stdin>", x, globals); err != nil {
 			PrintError(err)
 		} else if v != starlark.None {
@@ -115,39 +115,63 @@ func rep(rl *prepender, thread *starlark.Thread, globals *starlark.StringDict) e
 		return nil
 	}
 
-	//fmt.Printf("ParseExpr for single expression didn't work. err='%v'\n", err)
-
 	rl.startRecord()
 	rl.prepend(line)
 
 	// If the input so far is a single load or assignment statement,
 	// execute it without waiting for a blank line.
 	if f, err := syntax.Parse("<stdin>", rl, 0); err == nil && f != nil && len(f.Stmts) == 1 {
-		//fmt.Printf("Parse gave single statement, no error\n")
 		switch f.Stmts[0].(type) {
 		case *syntax.AssignStmt, *syntax.LoadStmt:
 			// Execute it as a file.
 			rl.restore()
 			oneStmt := rl.prefix
-			//fmt.Printf("executing single statement, after restoring rl, rl.prefix='%s'\n", string(oneStmt))
 			if err := execFileNoFreeze(thread, oneStmt, globals); err != nil {
 				PrintError(err)
 			}
 			return nil
 		}
-	} else {
-		//fmt.Printf("Parse() gave err='%#v'\n", err)
-		if f != nil {
-			//fmt.Printf("and len(f.Stmts)='%v'\n", len(f.Stmts))
-		}
 	}
 
-	//fmt.Printf("executing as file\n")
 	rl.restore()
 	rl.stopRecording()
 
+	// Otherwise assume it is the first of several
+	// comprising a file, followed by a blank line.
+	var buf bytes.Buffer
+	buf.Write(rl.prefix)
+	buf.Write(newline)
+	for {
+		rl.SetPrompt("... ")
+		line, err := rl.wrapped.ReadSlice()
+		if err != nil {
+			return err // may be ErrInterrupt
+		}
+		if l := bytes.TrimSpace(line); len(l) == 0 {
+			break // blank
+		}
+		buf.Write(line)
+		buf.Write(newline)
+	}
+	text := buf.Bytes()
+
+	// Try parsing it once more as an expression,
+	// such as a call spread over several lines:
+	//   f(
+	//     1,
+	//     2
+	//   )
+	if _, err := syntax.ParseExpr("<stdin>", text, 0); err == nil {
+		if v, err := starlark.Eval(thread, "<stdin>", text, globals); err != nil {
+			PrintError(err)
+		} else if v != starlark.None {
+			fmt.Println(v)
+		}
+		return nil
+	}
+
 	// Execute it as a file.
-	if err := execFileNoFreeze(thread, rl, globals); err != nil {
+	if err := execFileNoFreeze(thread, text, globals); err != nil {
 		PrintError(err)
 	}
 
@@ -219,8 +243,11 @@ func MakeLoad() func(thread *starlark.Thread, module string) (*starlark.StringDi
 	}
 }
 
+// prepender allows us to use the readline library
+// to handle multiline strings, even when we attempt
+// multiple parses of the same line.
 type prepender struct {
-	*readline.Instance
+	wrapped   *readline.Instance
 	prefix    []byte
 	recording bool
 	record    []byte
@@ -228,8 +255,12 @@ type prepender struct {
 
 func withPrepend(rl *readline.Instance) (p *prepender) {
 	return &prepender{
-		Instance: rl,
+		wrapped: rl,
 	}
+}
+
+func (p *prepender) SetPrompt(s string) {
+	p.wrapped.SetPrompt(s)
 }
 
 func (p *prepender) prepend(line []byte) {
@@ -260,34 +291,24 @@ func (p *prepender) stopRecording() {
 }
 
 func (p *prepender) restore() {
-	//fmt.Printf("top of restore, p.prefix='%s'\n", string(p.prefix))
 	p.prefix = p.record
 	p.record = p.record[:0]
 	p.recording = false
-	//fmt.Printf("bottom of restore, p.prefix='%s'\n", string(p.prefix))
 }
 
 func (p *prepender) ReadSlice() (by []byte, err error) {
-	//fmt.Printf("top of ReadSlice\n")
 	if len(p.prefix) != 0 {
-		//fmt.Printf("prepender is consuming prefix '%s'\n", string(p.prefix))
 		by = p.prefix
 		p.prefix = p.prefix[:0]
 
 	} else {
-		by, err = p.Instance.ReadSlice()
-		//fmt.Printf("prepender ReadSlice call to readline lib got: '%s', err='%v'\n", string(by), err)
+		by, err = p.wrapped.ReadSlice()
 		if err == nil {
 			by = append(by, '\n') // restore the byte that readline trimmed off.
 		}
 	}
-	// INVAR: by is ready to go
 	if p.recording {
 		p.record = append(p.record, by...)
-		//fmt.Printf(" +++ end of prepender.ReadSlice(), record is now '%s'\n", string(p.record))
-	} else {
-		//fmt.Printf("  *** prepender not recording\n")
 	}
-	//fmt.Printf("end of prepender.ReadSlice(), returning '%s', err='%#v'\n", string(by), err)
 	return
 }
