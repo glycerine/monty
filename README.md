@@ -28,7 +28,10 @@ Major additions:
 [x] decrement with `--`
 [x] assignment with `:=` is the same as `=`.
 [x] Preliminary complex128 number support. The `cmplx` package is available.
-[x] The REPL can handle multiline strings such as docstrings. (https://github.com/google/starlark-go/issues/81)
+[x] The REPL can handle multiline strings such as docstrings. Link
+~~~
+https://github.com/google/starlark-go/issues/81
+~~~
 [x] string(raw) will coerce raw []byte to a string; useful in
       `fmt.Printf("%s\n", string(exec.Command("ls", "-al").CombinedOutput())[0])`, for example.
       Try the above at the monty prompt. It works:
