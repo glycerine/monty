@@ -3,10 +3,12 @@ package repl
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/starlight-go/starlight"
 	"github.com/starlight-go/starlight/convert"
 
+	"github.com/glycerine/cn/dfs"
 	"github.com/glycerine/monty/starlark"
 	"github.com/glycerine/monty/verb"
 
@@ -59,6 +61,8 @@ import (
 	shadow_path_filepath "github.com/glycerine/monty/lib/path/filepath"
 )
 
+var Natives = make(map[string]func() interface{})
+
 var vv = verb.VV
 
 type TestBar struct {
@@ -68,6 +72,27 @@ type TestBar struct {
 
 func MakeTestBar() *TestBar {
 	return &TestBar{}
+}
+
+var UtcTz *time.Location
+var NYC *time.Location
+
+func init() {
+	var err error
+	UtcTz, err = time.LoadLocation("UTC")
+	panicOn(err)
+	NYC, err = time.LoadLocation("America/New_York")
+	panicOn(err)
+}
+
+// string -> time.Time
+func AsTm(tms string) time.Time {
+
+	tm, err := time.ParseInLocation(time.RFC3339Nano, tms, NYC)
+	if err != nil {
+		panic(err)
+	}
+	return tm.In(NYC)
 }
 
 type MontyEnv struct {
@@ -153,6 +178,15 @@ func (env *MontyEnv) Init() {
 		env.Stdlib[k] = true
 	}
 
+	// let starlark call into convert, without create a cycle at compile time.
+	starlark.ToValue = convert.ToValue
+	starlark.Natives = Natives
+
+	env.GoGlobal["natives"] = Natives
+	Natives["bar"] = func() interface{} { return dfs.NewBar() }
+	Natives["stream"] = func() interface{} { return dfs.NewDataStreamHandle("", 0) }
+
+	env.GoGlobal["astm"] = AsTm
 	env.GoGlobal["string"] = starlark.GenericAsString
 
 	// get someplace. TODO: improve where we look for scripts.

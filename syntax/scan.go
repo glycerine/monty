@@ -589,7 +589,7 @@ start:
 	}
 
 	// string literal
-	if c == '"' || c == '\'' {
+	if c == '"' || c == '\'' || c == '`' {
 		return sc.scanString(val, c)
 	}
 
@@ -785,11 +785,26 @@ start:
 
 func (sc *scanner) scanString(val *tokenValue, quote rune) Token {
 	start := sc.pos
+	backtick := quote == '`'
 	triple := len(sc.rest) >= 3 && sc.rest[0] == byte(quote) && sc.rest[1] == byte(quote) && sc.rest[2] == byte(quote)
 	sc.readRune()
 	if triple {
 		sc.readRune()
 		sc.readRune()
+	}
+
+	if backtick {
+		c := ' '
+		sc.startToken(val)
+		for c != '`' {
+			if sc.eof() {
+				sc.error(val.pos, "unexpected EOF in string")
+			}
+			c = sc.readRune()
+		}
+		sc.endToken(val)
+		val.string = val.raw[:len(val.raw)-1]
+		return STRING
 	}
 
 	quoteCount := 0

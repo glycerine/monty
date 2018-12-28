@@ -14,6 +14,12 @@ import (
 
 var vv = verb.VV
 
+// repl will set this to convert.ToValue, to avoid compile time cycle.
+type ToValueFunc func(v interface{}) (Value, error)
+
+var ToValue ToValueFunc
+var Natives map[string]func() interface{}
+
 const vmdebug = false // TODO(adonovan): use a bitfield of specific kinds of error.
 
 // TODO(adonovan):
@@ -393,7 +399,19 @@ loop:
 			}
 
 		case compile.NATIVESTRUCT:
-			vv("NATIVESTRUCT seen.")
+			strct := stack[sp-1].(*Struct)
+			vv("NATIVESTRUCT seen: '%s'", strct.Ctor)
+			f, ok := Natives[strct.Ctor]
+			if ok {
+				vv("located native Go function, attempting to call it.")
+				val, err := ToValue(f())
+				if err != nil {
+					vv("conversion got error: '%v'", err)
+				} else {
+					vv("conversion ok, got val='%#v'", val)
+					stack[sp-1] = val
+				}
+			}
 			// done setting data fields on the starlark Struct,
 			// convert to native struct possible now.
 
