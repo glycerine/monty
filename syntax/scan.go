@@ -101,6 +101,14 @@ const (
 	maxToken
 )
 
+// ReadSlicer allows a REPL to handle multiline strings.
+type ReadSlicer interface {
+	// ReadSlice gets a new line of input.
+	ReadSlice() ([]byte, error)
+	// SetPrompt changes the user prompt to s.
+	SetPrompt(s string)
+}
+
 func (tok Token) String() string { return tokenNames[tok] }
 
 // GoString is like String but quotes punctuation tokens.
@@ -242,6 +250,8 @@ type scanner struct {
 	keepComments   bool      // accumulate comments in slice
 	lineComments   []Comment // list of full line comments (if keepComments)
 	suffixComments []Comment // list of suffix comments (if keepComments)
+
+	getLine ReadSlicer // ask repl for another line. nil under file source.
 }
 
 func newScanner(filename string, src interface{}, keepComments bool) (*scanner, error) {
@@ -249,18 +259,24 @@ func newScanner(filename string, src interface{}, keepComments bool) (*scanner, 
 	if err != nil {
 		return nil, err
 	}
-	return &scanner{
+	sc := &scanner{
 		complete:     data,
 		rest:         data,
 		pos:          Position{file: &filename, Line: 1, Col: 1},
 		indentstk:    make([]int, 1, 10), // []int{0} + spare capacity
 		lineStart:    true,
 		keepComments: keepComments,
-	}, nil
+	}
+	if rs, isReadSlicer := src.(ReadSlicer); isReadSlicer {
+		sc.getLine = rs
+	}
+	return sc, nil
 }
 
 func readSource(filename string, src interface{}) ([]byte, error) {
 	switch src := src.(type) {
+	case ReadSlicer:
+		return src.ReadSlice()
 	case string:
 		return []byte(src), nil
 	case []byte:
@@ -767,11 +783,13 @@ func (sc *scanner) scanString(val *tokenValue, quote rune) Token {
 	quoteCount := 0
 	for {
 		if sc.eof() {
-			sc.error(val.pos, "unexpected EOF in string")
+			if triple && !sc.moreInput(&start) {
+				sc.error(val.pos, "unexpected EOF in triple quoted string.")
+			}
 		}
 		c := sc.readRune()
 		if c == '\n' && !triple {
-			sc.error(val.pos, "unexpected newline in string")
+			sc.error(val.pos, "unexpected newline in string.")
 		}
 		if c == quote {
 			quoteCount++
@@ -783,7 +801,9 @@ func (sc *scanner) scanString(val *tokenValue, quote rune) Token {
 		}
 		if c == '\\' {
 			if sc.eof() {
-				sc.error(val.pos, "unexpected EOF in string")
+				if triple && !sc.moreInput(&start) {
+					sc.error(val.pos, "unexpected EOF in string.")
+				}
 			}
 			sc.readRune()
 		}
@@ -1016,4 +1036,20 @@ var keywordToken = map[string]Token{
 	"try":      ILLEGAL,
 	"with":     ILLEGAL,
 	"yield":    ILLEGAL,
+}
+
+// under repl, get more input and return true.
+// under a file read, always return false.
+func (sc *scanner) moreInput(ppos *Position) bool {
+	if sc.getLine == nil {
+		return false
+	}
+	by, err := sc.getLine.ReadSlice()
+	if err != nil {
+		// err is one of (nil, io.EOF, readline.ErrInterrupt)
+		sc.error(*ppos, err.Error())
+	}
+	sc.rest = append(sc.rest, by...)
+	sc.token = append(sc.token, by...)
+	return true
 }

@@ -53,9 +53,10 @@ func REPL(thread *starlark.Thread, globals starlark.StringDict) {
 		PrintError(err)
 		return
 	}
+	prep := withPrepend(rl)
 	defer rl.Close()
 	for {
-		if err := rep(rl, thread, globals); err != nil {
+		if err := rep(prep, thread, globals); err != nil {
 			if err == readline.ErrInterrupt {
 				fmt.Println(err)
 				continue
@@ -66,11 +67,14 @@ func REPL(thread *starlark.Thread, globals starlark.StringDict) {
 	fmt.Println()
 }
 
+var newline = []byte{'\n'}
+
 // rep reads, evaluates, and prints one item.
 //
 // It returns an error (possibly readline.ErrInterrupt)
 // only if readline failed. Starlark errors are printed.
-func rep(rl *readline.Instance, thread *starlark.Thread, globals starlark.StringDict) error {
+func rep(rl *prepender, thread *starlark.Thread, globals starlark.StringDict) error {
+	rl.reset()
 	// Each item gets its own context,
 	// which is cancelled by a SIGINT.
 	//
@@ -89,76 +93,103 @@ func rep(rl *readline.Instance, thread *starlark.Thread, globals starlark.String
 	thread.SetLocal("context", ctx)
 
 	rl.SetPrompt(">>> ")
-	line, err := rl.Readline()
+
+	rl.startRecord()
+	line, err := rl.ReadSlice()
 	if err != nil {
 		return err // may be ErrInterrupt
 	}
 
-	if l := strings.TrimSpace(line); l == "" || l[0] == '#' {
+	if l := bytes.TrimSpace(line); len(l) == 0 || l[0] == '#' {
 		return nil // blank or comment
 	}
 
-	// If the line contains a well-formed expression, evaluate it.
-	if _, err := syntax.ParseExpr("<stdin>", line, 0); err == nil {
-		if v, err := starlark.Eval(thread, "<stdin>", line, globals); err != nil {
-			PrintError(err)
-		} else if v != starlark.None {
-			fmt.Println(v)
-		}
-		return nil
-	}
+	rl.restore(true)
+	rl.SetPrompt("... ")
 
-	// If the input so far is a single load or assignment statement,
-	// execute it without waiting for a blank line.
-	if f, err := syntax.Parse("<stdin>", line, 0); err == nil && len(f.Stmts) == 1 {
-		switch f.Stmts[0].(type) {
-		case *syntax.AssignStmt, *syntax.LoadStmt:
-			// Execute it as a file.
-			if err := execFileNoFreeze(thread, line, globals); err != nil {
+	for {
+		// If the line contains a well-formed expression, evaluate it.
+		x, err := syntax.ParseExpr("<stdin>", rl, 0)
+		if err == nil {
+			if v, err := starlark.EvalExpr(thread, "<stdin>", x, globals); err != nil {
 				PrintError(err)
+			} else if v != starlark.None {
+				fmt.Println(v)
 			}
 			return nil
 		}
-	}
+		// Assignments like 'b=2' error out with: got '=' after expression, want EOF'.
+		// We just need syntax.Parse() instead.
+		rl.restore(true)
 
-	// Otherwise assume it is the first of several
-	// comprising a file, followed by a blank line.
-	var buf bytes.Buffer
-	fmt.Fprintln(&buf, line)
-	for {
-		rl.SetPrompt("... ")
-		line, err := rl.Readline()
-		if err != nil {
-			return err // may be ErrInterrupt
+		var ready bool
+		f, err := syntax.Parse("<stdin>", rl, 0)
+		if err == nil && f != nil {
+
+			// If the input so far is a
+			// single load or assignment statement,
+			// execute it without waiting for a blank line.
+			// so `a =1; b= """
+			//  assignment of a multiline string is the last expression.
+			// """`
+			// will execute immediately after the closing """.
+			ns := len(f.Stmts)
+			if ns > 0 {
+				switch f.Stmts[ns-1].(type) {
+				case *syntax.AssignStmt, *syntax.LoadStmt:
+					ready = true
+				case *syntax.ExprStmt:
+					// Use the ParseExpr so we print.
+					// This handles a call spread over several lines:
+					//   f(
+					//     1,
+					//     2
+					//   )
+					rl.restore(true)
+					continue
+				}
+			}
+
+			// "\n\n" will end the statement. This is how Python does it.
+			n := len(rl.record)
+			if n > 2 {
+				if rl.record[n-1] == '\n' && rl.record[n-2] == '\n' {
+					ready = true
+				}
+			}
+
+			if !ready {
+				// NB do not rl.restore(true) here.
+
+				line, err := rl.ReadSlice()
+				if err != nil {
+					return err // ErrInterrupt or EOF
+				}
+				switch len(line) {
+				case 0:
+					continue
+				case 1:
+					if line[0] != '\n' {
+						continue
+					}
+				default:
+					continue
+				}
+				// INVAR: our last line had no indent. Time to evaluate.
+			}
+
+			// Execute it as a file.
+			rl.restore(true)
+			if err := execFileNoFreeze(thread, rl.prefix, globals); err != nil {
+				PrintError(err)
+			}
+			return nil
+		} else {
+			if strings.HasSuffix(err.Error(), "Interrupt") {
+				return nil
+			}
 		}
-		if l := strings.TrimSpace(line); l == "" {
-			break // blank
-		}
-		fmt.Fprintln(&buf, line)
 	}
-	text := buf.Bytes()
-
-	// Try parsing it once more as an expression,
-	// such as a call spread over several lines:
-	//   f(
-	//     1,
-	//     2
-	//   )
-	if _, err := syntax.ParseExpr("<stdin>", text, 0); err == nil {
-		if v, err := starlark.Eval(thread, "<stdin>", text, globals); err != nil {
-			PrintError(err)
-		} else if v != starlark.None {
-			fmt.Println(v)
-		}
-		return nil
-	}
-
-	// Execute it as a file.
-	if err := execFileNoFreeze(thread, text, globals); err != nil {
-		PrintError(err)
-	}
-
-	return nil
 }
 
 // execFileNoFreeze is starlark.ExecFile without globals.Freeze().
@@ -224,4 +255,77 @@ func MakeLoad() func(thread *starlark.Thread, module string) (starlark.StringDic
 		}
 		return e.globals, e.err
 	}
+}
+
+// prepender allows us to use the readline library
+// to handle multiline strings, even when we attempt
+// multiple parses of the same line.
+type prepender struct {
+	wrapped   *readline.Instance
+	prefix    []byte
+	recording bool
+	record    []byte
+}
+
+func withPrepend(rl *readline.Instance) (p *prepender) {
+	return &prepender{
+		wrapped: rl,
+	}
+}
+
+func (p *prepender) SetPrompt(s string) {
+	p.wrapped.SetPrompt(s)
+}
+
+func (p *prepender) prepend(line []byte) {
+	p.prefix = line
+}
+
+func (p *prepender) clearPrefix() {
+	p.prefix = p.prefix[:0]
+}
+
+func (p *prepender) reset() {
+	p.record = p.record[:0]
+	p.prefix = p.prefix[:0]
+	p.recording = false
+}
+
+func (p *prepender) startRecord() {
+	p.recording = true
+	if p.record == nil {
+		p.record = make([]byte, 0, 64)
+	} else {
+		p.record = p.record[:0]
+	}
+}
+
+func (p *prepender) stopRecording() {
+	p.recording = false
+}
+
+func (p *prepender) restore(keepRecording bool) {
+	if len(p.prefix) > 0 {
+		panic(fmt.Sprintf("restoring over top of prefix='%s'", string(p.prefix)))
+	}
+	p.prefix = p.record
+	p.record = p.record[:0]
+	p.recording = keepRecording
+}
+
+func (p *prepender) ReadSlice() (by []byte, err error) {
+	if len(p.prefix) != 0 {
+		by = p.prefix
+		p.prefix = p.prefix[:0]
+
+	} else {
+		by, err = p.wrapped.ReadSlice()
+		if err == nil {
+			by = append(by, '\n') // restore the byte that readline trimmed off.
+		} // else EOF
+	}
+	if p.recording {
+		p.record = append(p.record, by...)
+	}
+	return
 }

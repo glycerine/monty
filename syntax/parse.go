@@ -11,7 +11,9 @@ package syntax
 // package.  Verify that error positions are correct using the
 // chunkedfile mechanism.
 
-import "log"
+import (
+	"log"
+)
 
 // Enable this flag to print the token stream and log.Fatal on the first error.
 const debug = false
@@ -370,11 +372,20 @@ func (p *parser) parseIdent() *Ident {
 	return id
 }
 
-func (p *parser) consume(t Token) Position {
-	if p.tok != t {
-		p.in.errorf(p.in.pos, "got %#v, want %#v", p.tok, t)
+func (p *parser) consume(t Token) (pos Position) {
+	if p.tok == t {
+		return p.nextToken()
 	}
-	return p.nextToken()
+	if p.tok == EOF {
+		if p.in.moreInput(&p.in.pos) {
+			pos = p.nextToken()
+			if p.tok == t {
+				return p.nextToken()
+			}
+		}
+	}
+	p.in.errorf(p.in.pos, "got %#v, want %#v, in parser.consume().", p.tok, t)
+	return
 }
 
 // params = (param COMMA)* param
@@ -593,16 +604,16 @@ var precedence [maxToken]int8
 // Unary MINUS, unary PLUS, and TILDE have higher precedence so are handled in parsePrimary.
 // See https://github.com/google/starlark-go/blob/master/doc/spec.md#binary-operators
 var preclevels = [...][]Token{
-	{OR},                                   // or
-	{AND},                                  // and
-	{NOT},                                  // not (unary)
+	{OR},  // or
+	{AND}, // and
+	{NOT}, // not (unary)
 	{EQL, NEQ, LT, GT, LE, GE, IN, NOT_IN}, // == != < > <= >= in not in
-	{PIPE},                                 // |
-	{CIRCUMFLEX},                           // ^
-	{AMP},                                  // &
-	{LTLT, GTGT},                           // << >>
-	{MINUS, PLUS},                          // -
-	{STAR, PERCENT, SLASH, SLASHSLASH},     // * % / //
+	{PIPE},                             // |
+	{CIRCUMFLEX},                       // ^
+	{AMP},                              // &
+	{LTLT, GTGT},                       // << >>
+	{MINUS, PLUS},                      // -
+	{STAR, PERCENT, SLASH, SLASHSLASH}, // * % / //
 }
 
 func init() {

@@ -364,6 +364,17 @@ func Eval(thread *Thread, filename string, src interface{}, env StringDict) (Val
 	return Call(thread, f, nil, nil)
 }
 
+// EvalExpr is like Eval but expr is provided directly,
+// avoiding a second ParseExp() call.
+func EvalExpr(thread *Thread, filename string, expr syntax.Expr, env StringDict) (Value, error) {
+	locals, err := resolve.Expr(expr, env.Has, Universe.Has)
+	if err != nil {
+		return nil, err
+	}
+	f := makeToplevelFunction(compile.Expr(expr, "<expr>", locals), env)
+	return Call(thread, f, nil, nil)
+}
+
 // ExprFunc returns a no-argument function
 // that evaluates the expression whose source is src.
 func ExprFunc(filename string, src interface{}, env StringDict) (*Function, error) {
