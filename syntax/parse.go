@@ -389,11 +389,20 @@ func (p *parser) parseIdent() *Ident {
 	return id
 }
 
-func (p *parser) consume(t Token) Position {
-	if p.tok != t {
-		p.in.errorf(p.in.pos, "got %#v, want %#v", p.tok, t)
+func (p *parser) consume(t Token) (pos Position) {
+	if p.tok == t {
+		return p.nextToken()
 	}
-	return p.nextToken()
+	if p.tok == EOF {
+		if p.in.moreInput(&p.in.pos) {
+			pos = p.nextToken()
+			if p.tok == t {
+				return p.nextToken()
+			}
+		}
+	}
+	p.in.errorf(p.in.pos, "got %#v, want %#v, in parser.consume()", p.tok, t)
+	return
 }
 
 // params = (param COMMA)* param

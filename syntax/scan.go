@@ -247,18 +247,19 @@ func (p Position) isBefore(q Position) bool {
 
 // An scanner represents a single input file being parsed.
 type scanner struct {
-	complete       []byte     // entire input
-	rest           []byte     // rest of input
-	token          []byte     // token being scanned
-	pos            Position   // current input position
-	depth          int        // nesting of [ ] { } ( )
-	indentstk      []int      // stack of indentation levels
-	dents          int        // number of saved INDENT (>0) or OUTDENT (<0) tokens to return
-	lineStart      bool       // after NEWLINE; convert spaces to indentation tokens
-	keepComments   bool       // accumulate comments in slice
-	lineComments   []Comment  // list of full line comments (if keepComments)
-	suffixComments []Comment  // list of suffix comments (if keepComments)
-	getLine        ReadSlicer // ask repl for another line. nil under file source.
+	complete       []byte    // entire input
+	rest           []byte    // rest of input
+	token          []byte    // token being scanned
+	pos            Position  // current input position
+	depth          int       // nesting of [ ] { } ( )
+	indentstk      []int     // stack of indentation levels
+	dents          int       // number of saved INDENT (>0) or OUTDENT (<0) tokens to return
+	lineStart      bool      // after NEWLINE; convert spaces to indentation tokens
+	keepComments   bool      // accumulate comments in slice
+	lineComments   []Comment // list of full line comments (if keepComments)
+	suffixComments []Comment // list of suffix comments (if keepComments)
+
+	getLine ReadSlicer // ask repl for another line. nil under file source.
 }
 
 func newScanner(filename string, src interface{}, keepComments bool) (*scanner, error) {
@@ -522,7 +523,6 @@ start:
 
 	if c == '$' {
 		sc.readRune()
-		//vv("saw DOLLAR")
 		return DOLLAR
 	}
 
@@ -800,7 +800,6 @@ start:
 
 func (sc *scanner) scanString(val *tokenValue, quote rune) Token {
 	start := sc.pos
-	backtick := quote == '`'
 	triple := len(sc.rest) >= 3 && sc.rest[0] == byte(quote) && sc.rest[1] == byte(quote) && sc.rest[2] == byte(quote)
 	sc.readRune()
 	if triple {
@@ -808,30 +807,16 @@ func (sc *scanner) scanString(val *tokenValue, quote rune) Token {
 		sc.readRune()
 	}
 
-	if backtick {
-		c := ' '
-		sc.startToken(val)
-		for c != '`' {
-			if triple && !sc.moreInput(&start) {
-				sc.error(val.pos, "unexpected EOF in backtick string")
-			}
-			c = sc.readRune()
-		}
-		sc.endToken(val)
-		val.string = val.raw[:len(val.raw)-1]
-		return STRING
-	}
-
 	quoteCount := 0
 	for {
 		if sc.eof() {
 			if triple && !sc.moreInput(&start) {
-				sc.error(val.pos, `unexpected EOF in """ string`)
+				sc.error(val.pos, "unexpected EOF in triple quoted string.")
 			}
 		}
 		c := sc.readRune()
 		if c == '\n' && !triple {
-			sc.error(val.pos, "unexpected newline in string")
+			sc.error(val.pos, "unexpected newline in string.")
 		}
 		if c == quote {
 			quoteCount++
@@ -843,7 +828,9 @@ func (sc *scanner) scanString(val *tokenValue, quote rune) Token {
 		}
 		if c == '\\' {
 			if sc.eof() {
-				sc.error(val.pos, "unexpected EOF in string")
+				if triple && !sc.moreInput(&start) {
+					sc.error(val.pos, "unexpected EOF in string.")
+				}
 			}
 			sc.readRune()
 		}
@@ -1081,23 +1068,15 @@ var keywordToken = map[string]Token{
 // under repl, get more input and return true.
 // under a file read, always return false.
 func (sc *scanner) moreInput(ppos *Position) bool {
-	////fmt.Printf("moreInput called. sc.getLine = '%#v'\n", sc.getLine)
 	if sc.getLine == nil {
 		return false
 	}
 	sc.getLine.SetPrompt("... ")
-	defer func() {
-		sc.getLine.SetPrompt(">>> ")
-	}()
 	by, err := sc.getLine.ReadSlice()
 	if err != nil {
 		// err is one of (nil, io.EOF, readline.ErrInterrupt)
-		//fmt.Printf("got error back from getLine.ReadSlice(): '%#v'\n", err)
 		sc.error(*ppos, err.Error())
 	}
-	//	if len(by) == 0 {
-	//		return false
-	//	}
 	sc.rest = append(sc.rest, by...)
 	sc.token = append(sc.token, by...)
 	return true
