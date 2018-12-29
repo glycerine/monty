@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 
 	"github.com/chzyer/readline"
 	"github.com/glycerine/monty/starlark"
@@ -93,6 +94,7 @@ func rep(rl *prepender, thread *starlark.Thread, globals *starlark.StringDict) e
 
 	rl.SetPrompt(">>> ")
 
+	rl.startRecord()
 	line, err := rl.ReadSlice()
 	if err != nil {
 		return err // may be ErrInterrupt
@@ -102,39 +104,84 @@ func rep(rl *prepender, thread *starlark.Thread, globals *starlark.StringDict) e
 		return nil // blank or comment
 	}
 
-	rl.prepend(line)
+	rl.restore(true)
+	rl.SetPrompt("... ")
 
-	// If the line contains a well-formed expression, evaluate it.
-	x, err := syntax.ParseExpr("<stdin>", rl, 0)
-	if err == nil {
-		if v, err := starlark.EvalExpr(thread, "<stdin>", x, globals); err != nil {
-			PrintError(err)
-		} else if v != starlark.None {
-			fmt.Println(v)
-		}
-		return nil
-	}
-
-	rl.startRecord()
-	rl.prepend(line)
-
-	// If the input so far is a single load or assignment statement,
-	// execute it without waiting for a blank line.
-	if f, err := syntax.Parse("<stdin>", rl, 0); err == nil && f != nil && len(f.Stmts) == 1 {
-		switch f.Stmts[0].(type) {
-		case *syntax.AssignStmt, *syntax.LoadStmt:
-			// Execute it as a file.
-			rl.restore()
-			oneStmt := rl.prefix
-			if err := execFileNoFreeze(thread, oneStmt, globals); err != nil {
+	for {
+		// If the line contains a well-formed expression, evaluate it.
+		x, err := syntax.ParseExpr("<stdin>", rl, 0)
+		if err == nil {
+			if v, err := starlark.EvalExpr(thread, "<stdin>", x, globals); err != nil {
 				PrintError(err)
+			} else if v != starlark.None {
+				fmt.Println(v)
 			}
 			return nil
 		}
-	}
+		// Assignments like 'b=2' error out with: got '=' after expression, want EOF'.
+		// We just need syntax.Parse() instead.
+		rl.restore(true)
 
-	rl.restore()
-	rl.stopRecording()
+		var ready bool
+		f, err := syntax.Parse("<stdin>", rl, 0)
+		if err == nil && f != nil {
+
+			// If the input so far is a
+			// single load or assignment statement,
+			// execute it without waiting for a blank line.
+			if len(f.Stmts) == 1 {
+				switch f.Stmts[0].(type) {
+				case *syntax.AssignStmt, *syntax.LoadStmt:
+					ready = true
+				case *syntax.ExprStmt:
+					// use the ParseExpr so we print
+					rl.restore(true)
+					continue
+				}
+			}
+
+			// "\n\n" will end the statement. This is how Python does it.
+			n := len(rl.record)
+			if n > 2 {
+				if rl.record[n-1] == '\n' && rl.record[n-2] == '\n' {
+					ready = true
+				}
+			}
+
+			if !ready {
+				// NB do not rl.restore(true) here.
+
+				rl.SetPrompt("... ")
+				line, err := rl.ReadSlice()
+				if err != nil {
+					return err // ErrInterrupt or EOF
+				}
+				switch len(line) {
+				case 0:
+					continue
+				case 1:
+					if line[0] != '\n' {
+						continue
+					}
+				default:
+					continue
+				}
+				// INVAR: our last line had no indent. Time to evaluate.
+			}
+
+			// Execute it as a file.
+			rl.restore(true)
+			if err := execFileNoFreeze(thread, rl.prefix, globals); err != nil {
+				PrintError(err)
+			}
+			return nil
+		} else {
+			if strings.HasSuffix(err.Error(), "Interrupt") {
+				return nil
+			}
+		}
+	}
+	rl.restore(false)
 
 	// Otherwise assume it is the first of several
 	// comprising a file, followed by a blank line.
@@ -290,10 +337,13 @@ func (p *prepender) stopRecording() {
 	p.recording = false
 }
 
-func (p *prepender) restore() {
+func (p *prepender) restore(keepRecording bool) {
+	if len(p.prefix) > 0 {
+		panic(fmt.Sprintf("restoring over top of prefix='%s'", string(p.prefix)))
+	}
 	p.prefix = p.record
 	p.record = p.record[:0]
-	p.recording = false
+	p.recording = keepRecording
 }
 
 func (p *prepender) ReadSlice() (by []byte, err error) {
@@ -305,7 +355,7 @@ func (p *prepender) ReadSlice() (by []byte, err error) {
 		by, err = p.wrapped.ReadSlice()
 		if err == nil {
 			by = append(by, '\n') // restore the byte that readline trimmed off.
-		}
+		} // else EOF
 	}
 	if p.recording {
 		p.record = append(p.record, by...)
