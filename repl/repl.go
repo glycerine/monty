@@ -134,7 +134,12 @@ func rep(rl *prepender, thread *starlark.Thread, globals *starlark.StringDict) e
 				case *syntax.AssignStmt, *syntax.LoadStmt:
 					ready = true
 				case *syntax.ExprStmt:
-					// use the ParseExpr so we print
+					// Use the ParseExpr so we print.
+					// This handles a call spread over several lines:
+					//   f(
+					//     1,
+					//     2
+					//   )
 					rl.restore(true)
 					continue
 				}
@@ -150,8 +155,6 @@ func rep(rl *prepender, thread *starlark.Thread, globals *starlark.StringDict) e
 
 			if !ready {
 				// NB do not rl.restore(true) here.
-
-				rl.SetPrompt("... ")
 				line, err := rl.ReadSlice()
 				if err != nil {
 					return err // ErrInterrupt or EOF
@@ -181,48 +184,6 @@ func rep(rl *prepender, thread *starlark.Thread, globals *starlark.StringDict) e
 			}
 		}
 	}
-	rl.restore(false)
-
-	// Otherwise assume it is the first of several
-	// comprising a file, followed by a blank line.
-	var buf bytes.Buffer
-	buf.Write(rl.prefix)
-	buf.Write(newline)
-	for {
-		rl.SetPrompt("... ")
-		line, err := rl.wrapped.ReadSlice()
-		if err != nil {
-			return err // may be ErrInterrupt
-		}
-		if l := bytes.TrimSpace(line); len(l) == 0 {
-			break // blank
-		}
-		buf.Write(line)
-		buf.Write(newline)
-	}
-	text := buf.Bytes()
-
-	// Try parsing it once more as an expression,
-	// such as a call spread over several lines:
-	//   f(
-	//     1,
-	//     2
-	//   )
-	if _, err := syntax.ParseExpr("<stdin>", text, 0); err == nil {
-		if v, err := starlark.Eval(thread, "<stdin>", text, globals); err != nil {
-			PrintError(err)
-		} else if v != starlark.None {
-			fmt.Println(v)
-		}
-		return nil
-	}
-
-	// Execute it as a file.
-	if err := execFileNoFreeze(thread, text, globals); err != nil {
-		PrintError(err)
-	}
-
-	return nil
 }
 
 // execFileNoFreeze is starlark.ExecFile without globals.Freeze().

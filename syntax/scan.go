@@ -1071,7 +1071,6 @@ func (sc *scanner) moreInput(ppos *Position) bool {
 	if sc.getLine == nil {
 		return false
 	}
-	sc.getLine.SetPrompt("... ")
 	by, err := sc.getLine.ReadSlice()
 	if err != nil {
 		// err is one of (nil, io.EOF, readline.ErrInterrupt)
