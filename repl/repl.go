@@ -126,11 +126,16 @@ func rep(rl *prepender, thread *starlark.Thread, globals *starlark.StringDict) e
 		f, err := syntax.Parse("<stdin>", rl, 0)
 		if err == nil && f != nil {
 
-			// If the input so far is a
+			// If the last input so far is a
 			// single load or assignment statement,
 			// execute it without waiting for a blank line.
-			if len(f.Stmts) == 1 {
-				switch f.Stmts[0].(type) {
+			// so `a =1; b= """
+			//  assignment of a multiline string is the last expression.
+			// """`
+			// will execute immediately after the closing """.
+			ns := len(f.Stmts)
+			if ns > 0 {
+				switch f.Stmts[ns-1].(type) {
 				case *syntax.AssignStmt, *syntax.LoadStmt:
 					ready = true
 				case *syntax.ExprStmt:
@@ -174,7 +179,7 @@ func rep(rl *prepender, thread *starlark.Thread, globals *starlark.StringDict) e
 
 			// Execute it as a file.
 			rl.restore(true)
-			if err := execFileNoFreeze(thread, rl.prefix, globals); err != nil {
+			if err := ExecFileNoFreeze(thread, rl.prefix, globals); err != nil {
 				PrintError(err)
 			}
 			return nil
@@ -186,8 +191,8 @@ func rep(rl *prepender, thread *starlark.Thread, globals *starlark.StringDict) e
 	}
 }
 
-// execFileNoFreeze is starlark.ExecFile without globals.Freeze().
-func execFileNoFreeze(thread *starlark.Thread, src interface{}, globals *starlark.StringDict) error {
+// ExecFileNoFreeze is starlark.ExecFile without globals.Freeze().
+func ExecFileNoFreeze(thread *starlark.Thread, src interface{}, globals *starlark.StringDict) error {
 	_, prog, err := starlark.SourceProgram("<stdin>", src, globals.Has)
 	if err != nil {
 		return err
