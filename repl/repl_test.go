@@ -55,4 +55,10 @@ b="""
 
 """
 # should immediately (without waiting for another newline) define b equal to "\n\n\n\n".
+---
+# two expressions
+a = 1; b = """
+
+"""
+# should respond immediately, not wait for another line.
 */
