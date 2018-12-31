@@ -49,6 +49,7 @@ func init() {
 		"dir":       NewBuiltin("dir", dir),
 		"enumerate": NewBuiltin("enumerate", enumerate),
 		"float64":   NewBuiltin("float64", float), // requires resolve.AllowFloat
+		"float":     NewBuiltin("float", float),   // requires resolve.AllowFloat
 		"getattr":   NewBuiltin("getattr", getattr),
 		"hasattr":   NewBuiltin("hasattr", hasattr),
 		"hash":      NewBuiltin("hash", hash),
